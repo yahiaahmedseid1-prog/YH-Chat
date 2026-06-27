@@ -7,3 +7,8 @@ plugins {
   alias(libs.plugins.secrets) apply false
   alias(libs.plugins.google.services) apply false
 }
+
+tasks.register<Copy>("copyIndexHtml") {
+  from("app/src/main/assets/index.html")
+  into(".")
+}
