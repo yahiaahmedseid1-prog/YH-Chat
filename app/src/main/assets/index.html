@@ -1659,6 +1659,13 @@
                 </select>
               </div>
             </div>
+            <div class="form-group" style="margin-top: 15px;">
+              <label class="checkbox-label" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; cursor: pointer; color: var(--text-primary); font-size: 14px;">
+                <input type="checkbox" id="settings-show-online" style="width: 18px; height: 18px; accent-color: var(--accent);" checked>
+                <span>إظهار حالة الاتصال (متصل الآن) للآخرين</span>
+              </label>
+              <span style="font-size: 11px; color: var(--text-secondary); display: block; margin-top: 5px; margin-right: 28px; direction: rtl; text-align: right;">عند إيقاف تشغيل هذا الخيار، لن يتمكن المستخدمون الآخرون من رؤية حالتك كمتصل.</span>
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn-secondary" onclick="closeSettingsModal()">إلغاء</button>
@@ -1770,6 +1777,7 @@
     let activeChatListener = null;
     let chatsListListener = null;
     let typingListener = null;
+    let connectedListener = null;
     let isTypingLocally = false;
     let typingTimeout = null;
     let currentAuthTab = "email"; // "email" or "phone"
@@ -1838,6 +1846,7 @@
           // Start syncing active databases
           startChatsListListener();
           fetchAllUsers();
+          startPresenceSystem();
           
         } catch (error) {
           console.error("Error loading user info: ", error);
@@ -2052,9 +2061,14 @@
     // ==========================================
     // Logout Handler
     // ==========================================
-    function handleLogout() {
+    async function handleLogout() {
       if (confirm("هل أنت متأكد من رغبتك في تسجيل الخروج؟")) {
         toggleLeftDrawer(false);
+        if (currentUserId) {
+          try {
+            await set(ref(db, `users/${currentUserId}/online`), null);
+          } catch (e) {}
+        }
         signOut(auth).then(() => {
           location.reload();
         });
@@ -2132,6 +2146,10 @@
       toggleLeftDrawer(false);
       document.getElementById("settings-username").value = currentUserData.username;
       document.getElementById("settings-avatar-color").value = currentUserData.avatar || "#007aff";
+      const showOnlineToggle = document.getElementById("settings-show-online");
+      if (showOnlineToggle) {
+        showOnlineToggle.checked = currentUserData.showOnlineStatus !== false;
+      }
       document.getElementById("settings-modal").style.display = "flex";
     }
 
@@ -2142,6 +2160,7 @@
     async function saveUserSettings() {
       const newUsername = document.getElementById("settings-username").value.trim();
       const newAvatarColor = document.getElementById("settings-avatar-color").value;
+      const showOnlineVal = document.getElementById("settings-show-online").checked;
       
       if (!newUsername) {
         alert("اسم المستخدم مطلوب ولا يمكن تركه فارغاً!");
@@ -2152,7 +2171,8 @@
         const updateData = {
           ...currentUserData,
           username: newUsername,
-          avatar: newAvatarColor
+          avatar: newAvatarColor,
+          showOnlineStatus: showOnlineVal
         };
 
         // Save in Realtime DB
@@ -2164,6 +2184,15 @@
         const profileAvatar = document.getElementById("my-profile-avatar");
         profileAvatar.textContent = getInitials(newUsername);
         profileAvatar.style.backgroundColor = newAvatarColor;
+
+        // Apply updated presence state immediately
+        const presenceRef = ref(db, `users/${currentUserId}/online`);
+        if (showOnlineVal) {
+          await set(presenceRef, true);
+          onDisconnect(presenceRef).remove();
+        } else {
+          await set(presenceRef, null);
+        }
 
         // Close modal and alert success
         closeSettingsModal();
@@ -2215,6 +2244,7 @@
         }
         renderUsersList();
         renderChatsListHTML();
+        updateActiveChatHeaderStatus();
       });
     }
 
@@ -2247,9 +2277,11 @@
         
         const initials = getInitials(user.username);
         const color = user.avatar || "#007aff";
+        const isOnline = user.online === true;
+        const onlineDotHtml = isOnline ? `<div class="online-indicator" title="متصل"></div>` : "";
         
         item.innerHTML = `
-          <div class="avatar" style="background-color: ${color};">${initials}</div>
+          <div class="avatar" style="background-color: ${color}; position: relative;">${initials}${onlineDotHtml}</div>
           <div class="item-details">
             <div class="item-header">
               <span class="item-name">${user.username}</span>
@@ -2359,8 +2391,11 @@
           listCheckmarks = `<span style="color: ${colorSymbol}; font-weight: bold; margin-left: 5px; font-size: 11px; display: inline-block; vertical-align: middle;">${checkSymbol}</span>`;
         }
 
+        const isOnline = otherUser.online === true;
+        const onlineDotHtml = isOnline ? `<div class="online-indicator" title="متصل"></div>` : "";
+
         item.innerHTML = `
-          <div class="avatar" style="background-color: ${color};">${initials}</div>
+          <div class="avatar" style="background-color: ${color}; position: relative;">${initials}${onlineDotHtml}</div>
           <div class="item-details">
             <div class="item-header">
               <span class="item-name">${otherUser.username}</span>
@@ -2422,7 +2457,7 @@
       headerAvatar.style.backgroundColor = activeChatUserData.avatar || "#007aff";
       
       document.getElementById("active-chat-username").textContent = activeChatUserData.username;
-      document.getElementById("active-chat-status").textContent = activeChatUserData.phone ? "عبر الهاتف" : "عبر البريد";
+      updateActiveChatHeaderStatus();
       
       // Toggle body states on mobile layout (switch layout visibility)
       document.body.classList.add("show-chat");
@@ -2753,6 +2788,55 @@
         chatsListListener();
         chatsListListener = null;
       }
+      if (connectedListener) {
+        connectedListener();
+        connectedListener = null;
+      }
+    }
+
+    function updateActiveChatHeaderStatus() {
+      if (!activeChatUserId) return;
+      const otherUser = allUsersCache[activeChatUserId];
+      if (!otherUser) return;
+
+      const statusEl = document.getElementById("active-chat-status");
+      if (!statusEl) return;
+
+      // Only update if typing indicator is not currently active
+      if (statusEl.querySelector(".typing-indicator-container")) {
+        return; 
+      }
+
+      const isOnline = otherUser.online === true;
+      if (isOnline) {
+        statusEl.innerHTML = `<span style="color: #30d158; font-weight: bold; display: inline-flex; align-items: center; gap: 4px;">● متصل</span>`;
+      } else {
+        statusEl.textContent = otherUser.phone ? "عبر الهاتف" : "عبر البريد";
+      }
+    }
+
+    function startPresenceSystem() {
+      if (connectedListener) {
+        connectedListener();
+        connectedListener = null;
+      }
+
+      if (!currentUserId) return;
+
+      const connectedRef = ref(db, ".info/connected");
+      connectedListener = onValue(connectedRef, async (snap) => {
+        if (snap.val() === true) {
+          const showOnline = currentUserData && currentUserData.showOnlineStatus !== false;
+          const presenceRef = ref(db, `users/${currentUserId}/online`);
+          
+          if (showOnline) {
+            await set(presenceRef, true);
+            onDisconnect(presenceRef).remove();
+          } else {
+            await set(presenceRef, null);
+          }
+        }
+      });
     }
 
     function getInitials(name) {
