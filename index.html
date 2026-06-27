@@ -140,7 +140,7 @@
     }
 
     /* Auth Tabs */
-    .auth-tabs {
+    .auth-tabs, .auth-mode-tabs {
       display: flex;
       background-color: var(--bg-main);
       border-radius: 14px;
@@ -149,7 +149,7 @@
       border: 1px solid var(--divider);
     }
 
-    .auth-tab {
+    .auth-tab, .auth-mode-tab {
       flex: 1;
       text-align: center;
       padding: 11px;
@@ -161,7 +161,7 @@
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .auth-tab.active {
+    .auth-tab.active, .auth-mode-tab.active {
       background-color: var(--accent);
       color: white;
       box-shadow: 0 4px 12px rgba(82, 136, 193, 0.35);
@@ -1474,7 +1474,14 @@
         <span class="message"></span>
       </div>
 
-      <!-- Auth Tab Buttons -->
+      <!-- Auth Mode Selector (Login vs Sign Up) -->
+      <div class="auth-mode-tabs">
+        <div class="auth-mode-tab active" id="mode-tab-login" onclick="switchAuthMode('login')">تسجيل الدخول</div>
+        <div class="auth-mode-tab" id="mode-tab-register" onclick="switchAuthMode('register')">إنشاء حساب</div>
+      </div>
+
+      <!-- Auth Tab Buttons (Email vs Phone) -->
+      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; text-align: right; padding-right: 4px;">طريقة التحقق:</div>
       <div class="auth-tabs">
         <div class="auth-tab active" id="tab-email" onclick="switchAuthTab('email')">البريد الإلكتروني</div>
         <div class="auth-tab" id="tab-phone" onclick="switchAuthTab('phone')">رقم الهاتف</div>
@@ -1482,9 +1489,22 @@
 
       <!-- Auth Input Fields form -->
       <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+        <!-- Profile Picture (Register Mode Only) -->
+        <div class="form-group" id="group-profile-pic" style="display: none; text-align: center;">
+          <label style="text-align: center; display: block; margin-bottom: 8px;">الصورة الشخصية (اختياري)</label>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div id="auth-profile-pic-preview" style="width: 80px; height: 80px; border-radius: 50%; background-color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; color: white; background-size: cover; background-position: center; position: relative; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="document.getElementById('auth-profile-pic-input').click()">
+              <span>👤</span>
+              <div style="position: absolute; bottom: 0; right: 0; background-color: var(--accent); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; border: 2px solid var(--bg-menu);">📷</div>
+            </div>
+            <input type="file" id="auth-profile-pic-input" accept="image/*" style="display: none;" onchange="handleAuthProfilePicChange(event)">
+            <span style="font-size: 11px; color: var(--text-secondary);">انقر لاختيار صورة</span>
+          </div>
+        </div>
+
         <!-- Username (Register Mode Only) -->
         <div class="form-group" id="group-username" style="display: none;">
-          <label for="auth-username">اسم المستخدم</label>
+          <label for="auth-username">اسم المستخدم (الاسم المعروض)</label>
           <div class="input-wrapper">
             <input type="text" id="auth-username" placeholder="مثال: يوسف، أحمد">
             <span class="input-icon">👤</span>
@@ -1518,16 +1538,39 @@
           </div>
         </div>
 
-        <!-- Toggle Create Account / Login -->
-        <div class="auth-toggle-mode">
-          <label class="checkbox-label" id="check-new-user-wrapper">
-            <input type="checkbox" id="auth-new-user" onchange="toggleSignupMode(this.checked)">
-            <span>أنا مستخدم جديد (إنشاء حساب)</span>
-          </label>
+        <!-- Birthdate (Register Mode Only) -->
+        <div class="form-group" id="group-dob" style="display: none;">
+          <label for="auth-dob">تاريخ الميلاد (اختياري)</label>
+          <div class="input-wrapper">
+            <input type="date" id="auth-dob" style="color-scheme: dark; text-align: right;">
+            <span class="input-icon">📅</span>
+          </div>
+        </div>
+
+        <!-- Gender (Register Mode Only) -->
+        <div class="form-group" id="group-gender" style="display: none;">
+          <label for="auth-gender">الجنس (اختياري)</label>
+          <div class="input-wrapper">
+            <select id="auth-gender" style="width:100%; padding: 13px 44px 13px 16px; background-color: var(--bg-main); border: 1px solid var(--divider); border-radius:12px; color:white; outline:none; text-align: right; direction: rtl; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+              <option value="">اختر الجنس</option>
+              <option value="ذكر">ذكر</option>
+              <option value="أنثى">أنثى</option>
+            </select>
+            <span class="input-icon" style="z-index: 2;">🚻</span>
+          </div>
+        </div>
+
+        <!-- Bio / Description (Register Mode Only) -->
+        <div class="form-group" id="group-bio" style="display: none;">
+          <label for="auth-bio">الوصف / نبذة شخصية (اختياري)</label>
+          <div class="input-wrapper">
+            <input type="text" id="auth-bio" placeholder="اكتب نبذة شخصية قصيرة">
+            <span class="input-icon">📝</span>
+          </div>
         </div>
 
         <!-- Submit Button -->
-        <button type="submit" class="btn-submit" id="btn-auth-submit">
+        <button type="submit" class="btn-submit" id="btn-auth-submit" style="margin-top: 10px;">
           <span id="auth-btn-text">تسجيل الدخول</span>
           <div class="spinner" id="auth-spinner"></div>
         </button>
@@ -1667,6 +1710,18 @@
           <div class="info-user-status" id="info-user-status">متصل</div>
 
           <div class="info-cards">
+            <div class="info-card" id="info-card-bio-wrapper">
+              <span class="info-card-label">نبذة شخصية / وصف</span>
+              <span class="info-card-value" id="info-card-bio">لا توجد نبذة</span>
+            </div>
+            <div class="info-card" id="info-card-dob-wrapper">
+              <span class="info-card-label">تاريخ الميلاد</span>
+              <span class="info-card-value" id="info-card-dob">غير محدد</span>
+            </div>
+            <div class="info-card" id="info-card-gender-wrapper">
+              <span class="info-card-label">الجنس</span>
+              <span class="info-card-value" id="info-card-gender">غير محدد</span>
+            </div>
             <div class="info-card">
               <span class="info-card-label">اسم الحساب (ID)</span>
               <span class="info-card-value" id="info-card-username">@username</span>
@@ -1736,7 +1791,18 @@
             <h3>تعديل الملف الشخصي</h3>
             <button class="btn-close-modal" onclick="closeSettingsModal()">×</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" style="max-height: 65vh; overflow-y: auto; padding: 20px 24px;">
+            
+            <!-- Profile Picture Picker -->
+            <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; gap: 8px;">
+              <div id="settings-profile-pic-preview" style="width: 86px; height: 86px; border-radius: 50%; background-color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; color: white; background-size: cover; background-position: center; position: relative; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="document.getElementById('settings-profile-pic-input').click()">
+                <div style="position: absolute; bottom: 0; right: 0; background-color: var(--accent); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid var(--bg-menu);">📷</div>
+              </div>
+              <input type="file" id="settings-profile-pic-input" accept="image/*" style="display: none;" onchange="handleSettingsProfilePicChange(event)">
+              <span style="font-size: 12px; color: var(--text-secondary);">انقر لتغيير الصورة الشخصية</span>
+            </div>
+
+            <!-- Username Field -->
             <div class="form-group">
               <label for="settings-username">اسم الحساب الجديد</label>
               <div class="input-wrapper">
@@ -1744,8 +1810,41 @@
                 <span class="input-icon">👤</span>
               </div>
             </div>
+
+            <!-- Bio / Description Field -->
             <div class="form-group">
-              <label for="settings-avatar-color">لون الأفاتار المفضل</label>
+              <label for="settings-bio">نبذة شخصية / وصف</label>
+              <div class="input-wrapper">
+                <input type="text" id="settings-bio" placeholder="اكتب نبذة شخصية أو وصفاً قصيراً">
+                <span class="input-icon">📝</span>
+              </div>
+            </div>
+
+            <!-- Birthdate Field -->
+            <div class="form-group">
+              <label for="settings-dob">تاريخ الميلاد</label>
+              <div class="input-wrapper">
+                <input type="date" id="settings-dob" style="color-scheme: dark; text-align: right;">
+                <span class="input-icon">📅</span>
+              </div>
+            </div>
+
+            <!-- Gender Field -->
+            <div class="form-group">
+              <label for="settings-gender">الجنس</label>
+              <div class="input-wrapper">
+                <select id="settings-gender" style="width:100%; padding: 12px 44px 12px 16px; background-color: var(--bg-main); border: 1px solid var(--divider); border-radius:12px; color:white; outline:none; text-align: right; direction: rtl; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+                  <option value="">غير محدد</option>
+                  <option value="ذكر">ذكر</option>
+                  <option value="أنثى">أنثى</option>
+                </select>
+                <span class="input-icon" style="z-index: 2;">🚻</span>
+              </div>
+            </div>
+
+            <!-- Avatar Preferred Color -->
+            <div class="form-group">
+              <label for="settings-avatar-color">لون الأفاتار المفضل (في حال عدم وجود صورة)</label>
               <div class="input-wrapper">
                 <select id="settings-avatar-color" style="width:100%; padding: 12px; background-color: var(--bg-main); border: 1px solid var(--divider); border-radius:10px; color:white; outline:none;">
                   <option value="#007aff">أزرق تيليجرام كلاسيك</option>
@@ -1756,6 +1855,8 @@
                 </select>
               </div>
             </div>
+
+            <!-- Show Online State -->
             <div class="form-group" style="margin-top: 15px;">
               <label class="checkbox-label" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; cursor: pointer; color: var(--text-primary); font-size: 14px;">
                 <input type="checkbox" id="settings-show-online" style="width: 18px; height: 18px; accent-color: var(--accent);" checked>
@@ -1763,6 +1864,15 @@
               </label>
               <span style="font-size: 11px; color: var(--text-secondary); display: block; margin-top: 5px; margin-right: 28px; direction: rtl; text-align: right;">عند إيقاف تشغيل هذا الخيار، لن يتمكن المستخدمون الآخرون من رؤية حالتك كمتصل.</span>
             </div>
+
+            <!-- Danger Zone: Delete Account -->
+            <hr style="border: none; border-top: 1px solid var(--divider); margin: 24px 0 16px 0;">
+            <div style="background-color: rgba(255, 69, 58, 0.08); border: 1px dashed rgba(255, 69, 58, 0.3); padding: 18px; border-radius: 16px; text-align: center;">
+              <h4 style="color: #ff453a; font-size: 15px; margin-bottom: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">⚠️ منطقة الخطر</h4>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.5; text-align: right; direction: rtl;">حذف الحساب سيؤدي إلى مسح كافة بياناتك ورسائلك ورقم هاتفك نهائياً من خوادمنا ولا يمكن التراجع عن هذا الإجراء.</p>
+              <button type="button" style="background-color: #ff453a; color: white; border: none; font-size: 13.5px; font-weight: bold; padding: 12px 16px; border-radius: 11px; width: 100%; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#e03e34'" onmouseout="this.style.backgroundColor='#ff453a'" onclick="confirmDeleteAccount()">حذف الحساب نهائياً</button>
+            </div>
+
           </div>
           <div class="modal-footer">
             <button class="btn-secondary" onclick="closeSettingsModal()">إلغاء</button>
@@ -1798,7 +1908,8 @@
       createUserWithEmailAndPassword, 
       signOut, 
       onAuthStateChanged, 
-      updateProfile 
+      updateProfile,
+      deleteUser
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
     
     import { 
@@ -1859,10 +1970,16 @@
     let isSignupMode = false;
     let currentListTab = "chats"; // "chats" or "users"
     let searchQuery = "";
+    
+    let authProfilePicBase64 = "";
+    let settingsProfilePicBase64 = "";
 
     // Export helpers to global window scope so HTML onclick handles can call them
     window.switchAuthTab = switchAuthTab;
-    window.toggleSignupMode = toggleSignupMode;
+    window.switchAuthMode = switchAuthMode;
+    window.handleAuthProfilePicChange = handleAuthProfilePicChange;
+    window.handleSettingsProfilePicChange = handleSettingsProfilePicChange;
+    window.confirmDeleteAccount = confirmDeleteAccount;
     window.handleAuthSubmit = handleAuthSubmit;
     window.switchListTab = switchListTab;
     window.toggleLeftDrawer = toggleLeftDrawer;
@@ -1915,8 +2032,7 @@
           document.getElementById("my-profile-sub").textContent = currentUserData.email || currentUserData.phone || "";
           
           const profileAvatar = document.getElementById("my-profile-avatar");
-          profileAvatar.textContent = getInitials(currentUserData.username);
-          profileAvatar.style.backgroundColor = currentUserData.avatar || "#007aff";
+          setAvatar(profileAvatar, currentUserData);
 
           // Start syncing active databases
           startChatsListListener();
@@ -1980,21 +2096,100 @@
     // ==========================================
     // Toggle signup mode
     // ==========================================
-    function toggleSignupMode(checked) {
-      isSignupMode = checked;
+    function switchAuthMode(mode) {
+      const tabLogin = document.getElementById("mode-tab-login");
+      const tabRegister = document.getElementById("mode-tab-register");
       
       const groupUsername = document.getElementById("group-username");
+      const groupProfilePic = document.getElementById("group-profile-pic");
+      const groupDob = document.getElementById("group-dob");
+      const groupGender = document.getElementById("group-gender");
+      const groupBio = document.getElementById("group-bio");
+      
       const submitText = document.getElementById("auth-btn-text");
       const authUsernameInput = document.getElementById("auth-username");
       
-      if (checked) {
+      if (mode === "register") {
+        isSignupMode = true;
+        tabRegister.classList.add("active");
+        tabLogin.classList.remove("active");
+        
         groupUsername.style.display = "block";
+        groupProfilePic.style.display = "block";
+        groupDob.style.display = "block";
+        groupGender.style.display = "block";
+        groupBio.style.display = "block";
+        
         authUsernameInput.setAttribute("required", "true");
         submitText.textContent = "إنشاء حساب جديد";
       } else {
+        isSignupMode = false;
+        tabLogin.classList.add("active");
+        tabRegister.classList.remove("active");
+        
         groupUsername.style.display = "none";
+        groupProfilePic.style.display = "none";
+        groupDob.style.display = "none";
+        groupGender.style.display = "none";
+        groupBio.style.display = "none";
+        
         authUsernameInput.removeAttribute("required");
         submitText.textContent = "تسجيل الدخول";
+      }
+    }
+
+    function compressImage(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement("canvas");
+          const max_size = 250;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > max_size) {
+              height *= max_size / width;
+              width = max_size;
+            }
+          } else {
+            if (height > max_size) {
+              width *= max_size / height;
+              height = max_size;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+          callback(dataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleAuthProfilePicChange(event) {
+      const file = event.target.files[0];
+      if (file) {
+        compressImage(file, (base64) => {
+          authProfilePicBase64 = base64;
+          const preview = document.getElementById("auth-profile-pic-preview");
+          preview.style.backgroundImage = `url(${base64})`;
+          preview.querySelector("span").style.display = "none";
+        });
+      }
+    }
+
+    function handleSettingsProfilePicChange(event) {
+      const file = event.target.files[0];
+      if (file) {
+        compressImage(file, (base64) => {
+          settingsProfilePicBase64 = base64;
+          const preview = document.getElementById("settings-profile-pic-preview");
+          preview.style.backgroundImage = `url(${base64})`;
+        });
       }
     }
 
@@ -2031,12 +2226,20 @@
             const userCredential = await createUserWithEmailAndPassword(auth, emailVal, passwordVal);
             const user = userCredential.user;
             
+            const dobVal = document.getElementById("auth-dob").value || "";
+            const genderVal = document.getElementById("auth-gender").value || "";
+            const bioVal = document.getElementById("auth-bio").value.trim() || "";
+
             // Write user info to Realtime DB
             const newUserData = {
               email: emailVal,
               phone: "",
               username: usernameVal,
-              avatar: getRandomAvatarColor()
+              avatar: getRandomAvatarColor(),
+              profilePic: authProfilePicBase64 || "",
+              dob: dobVal,
+              gender: genderVal,
+              bio: bioVal
             };
             
             await set(ref(db, `users/${user.uid}`), newUserData);
@@ -2070,12 +2273,20 @@
             const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, passwordVal);
             const user = userCredential.user;
 
+            const dobVal = document.getElementById("auth-dob").value || "";
+            const genderVal = document.getElementById("auth-gender").value || "";
+            const bioVal = document.getElementById("auth-bio").value.trim() || "";
+
             // Write profiles and register mapping in db
             const newUserData = {
               email: "",
               phone: phoneVal,
               username: usernameVal,
-              avatar: getRandomAvatarColor()
+              avatar: getRandomAvatarColor(),
+              profilePic: authProfilePicBase64 || "",
+              dob: dobVal,
+              gender: genderVal,
+              bio: bioVal
             };
 
             await set(ref(db, `users/${user.uid}`), newUserData);
@@ -2188,11 +2399,41 @@
         const targetUser = allUsersCache[activeChatUserId];
         if (targetUser) {
           const infoAvatar = document.getElementById("info-user-avatar");
-          infoAvatar.textContent = getInitials(targetUser.username);
-          infoAvatar.style.backgroundColor = targetUser.avatar || "#007aff";
+          setAvatar(infoAvatar, targetUser);
           
           document.getElementById("info-user-name").textContent = targetUser.username;
           document.getElementById("info-card-username").textContent = "@" + targetUser.username;
+          
+          // Populate new custom fields
+          const bioWrapper = document.getElementById("info-card-bio-wrapper");
+          const bioValue = document.getElementById("info-card-bio");
+          if (targetUser.bio) {
+            bioWrapper.style.display = "flex";
+            bioValue.textContent = targetUser.bio;
+          } else {
+            bioWrapper.style.display = "flex";
+            bioValue.textContent = "لا توجد نبذة شخصية";
+          }
+          
+          const dobWrapper = document.getElementById("info-card-dob-wrapper");
+          const dobValue = document.getElementById("info-card-dob");
+          if (targetUser.dob) {
+            dobWrapper.style.display = "flex";
+            dobValue.textContent = targetUser.dob;
+          } else {
+            dobWrapper.style.display = "flex";
+            dobValue.textContent = "غير محدد";
+          }
+          
+          const genderWrapper = document.getElementById("info-card-gender-wrapper");
+          const genderValue = document.getElementById("info-card-gender");
+          if (targetUser.gender) {
+            genderWrapper.style.display = "flex";
+            genderValue.textContent = targetUser.gender;
+          } else {
+            genderWrapper.style.display = "flex";
+            genderValue.textContent = "غير محدد";
+          }
           
           const emailWrapper = document.getElementById("info-card-email-wrapper");
           const emailValue = document.getElementById("info-card-email");
@@ -2226,13 +2467,29 @@
       }
     }
 
-    // ==========================================
+     // ==========================================
     // Edit Profile Modal Settings
     // ==========================================
     function showSettingsModal() {
       toggleLeftDrawer(false);
       document.getElementById("settings-username").value = currentUserData.username;
       document.getElementById("settings-avatar-color").value = currentUserData.avatar || "#007aff";
+      
+      // Populate new custom fields
+      document.getElementById("settings-bio").value = currentUserData.bio || "";
+      document.getElementById("settings-dob").value = currentUserData.dob || "";
+      document.getElementById("settings-gender").value = currentUserData.gender || "";
+      
+      settingsProfilePicBase64 = currentUserData.profilePic || "";
+      const preview = document.getElementById("settings-profile-pic-preview");
+      if (settingsProfilePicBase64) {
+        preview.style.backgroundImage = `url(${settingsProfilePicBase64})`;
+        preview.style.backgroundColor = "transparent";
+      } else {
+        preview.style.backgroundImage = "";
+        preview.style.backgroundColor = currentUserData.avatar || "#007aff";
+      }
+
       const showOnlineToggle = document.getElementById("settings-show-online");
       if (showOnlineToggle) {
         showOnlineToggle.checked = currentUserData.showOnlineStatus !== false;
@@ -2247,6 +2504,9 @@
     async function saveUserSettings() {
       const newUsername = document.getElementById("settings-username").value.trim();
       const newAvatarColor = document.getElementById("settings-avatar-color").value;
+      const newBio = document.getElementById("settings-bio").value.trim();
+      const newDob = document.getElementById("settings-dob").value || "";
+      const newGender = document.getElementById("settings-gender").value || "";
       const showOnlineVal = document.getElementById("settings-show-online").checked;
       
       if (!newUsername) {
@@ -2259,6 +2519,10 @@
           ...currentUserData,
           username: newUsername,
           avatar: newAvatarColor,
+          bio: newBio,
+          dob: newDob,
+          gender: newGender,
+          profilePic: settingsProfilePicBase64,
           showOnlineStatus: showOnlineVal
         };
 
@@ -2269,8 +2533,7 @@
         // Sync with layout drawer values
         document.getElementById("my-profile-name").textContent = newUsername;
         const profileAvatar = document.getElementById("my-profile-avatar");
-        profileAvatar.textContent = getInitials(newUsername);
-        profileAvatar.style.backgroundColor = newAvatarColor;
+        setAvatar(profileAvatar, currentUserData);
 
         // Apply updated presence state immediately
         const presenceRef = ref(db, `users/${currentUserId}/online`);
@@ -2367,8 +2630,15 @@
         const isOnline = user.online === true;
         const onlineDotHtml = isOnline ? `<div class="online-indicator" title="متصل"></div>` : "";
         
+        let avatarStyle = `background-color: ${color}; position: relative;`;
+        let avatarContent = initials;
+        if (user.profilePic) {
+          avatarStyle = `background-image: url(${user.profilePic}); background-size: cover; background-position: center; position: relative; background-color: transparent;`;
+          avatarContent = "";
+        }
+        
         item.innerHTML = `
-          <div class="avatar" style="background-color: ${color}; position: relative;">${initials}${onlineDotHtml}</div>
+          <div class="avatar" style="${avatarStyle}">${avatarContent}${onlineDotHtml}</div>
           <div class="item-details">
             <div class="item-header">
               <span class="item-name">${user.username}</span>
@@ -2471,6 +2741,13 @@
         const color = otherUser.avatar || "#007aff";
         const msgTimeStr = chat.lastMessageTime ? formatMessageTime(chat.lastMessageTime) : "";
         
+        let avatarStyle = `background-color: ${color}; position: relative;`;
+        let avatarContent = initials;
+        if (otherUser.profilePic) {
+          avatarStyle = `background-image: url(${otherUser.profilePic}); background-size: cover; background-position: center; position: relative; background-color: transparent;`;
+          avatarContent = "";
+        }
+
         let listCheckmarks = "";
         if (chat.lastSenderId === currentUserId && chat.lastMessage) {
           const checkSymbol = chat.lastMessageRead === true ? "✓✓" : "✓";
@@ -2482,7 +2759,7 @@
         const onlineDotHtml = isOnline ? `<div class="online-indicator" title="متصل"></div>` : "";
 
         item.innerHTML = `
-          <div class="avatar" style="background-color: ${color}; position: relative;">${initials}${onlineDotHtml}</div>
+          <div class="avatar" style="${avatarStyle}">${avatarContent}${onlineDotHtml}</div>
           <div class="item-details">
             <div class="item-header">
               <span class="item-name">${otherUser.username}</span>
@@ -2540,8 +2817,7 @@
       
       // Update Active chat view header
       const headerAvatar = document.getElementById("active-chat-avatar");
-      headerAvatar.textContent = getInitials(activeChatUserData.username);
-      headerAvatar.style.backgroundColor = activeChatUserData.avatar || "#007aff";
+      setAvatar(headerAvatar, activeChatUserData);
       
       document.getElementById("active-chat-username").textContent = activeChatUserData.username;
       updateActiveChatHeaderStatus();
@@ -2938,6 +3214,65 @@
     function getRandomAvatarColor() {
       const colors = ["#007aff", "#30d158", "#ff453a", "#af52de", "#ff9f0a"];
       return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    function setAvatar(element, user) {
+      if (!element) return;
+      if (user && user.profilePic) {
+        element.style.backgroundImage = `url(${user.profilePic})`;
+        element.style.backgroundSize = "cover";
+        element.style.backgroundPosition = "center";
+        element.style.backgroundColor = "transparent";
+        element.textContent = "";
+      } else {
+        element.style.backgroundImage = "";
+        element.textContent = getInitials(user ? user.username : "?");
+        element.style.backgroundColor = (user && user.avatar) || "#007aff";
+      }
+    }
+
+    async function confirmDeleteAccount() {
+      const confirmation = confirm("هل أنت متأكد تماماً من رغبتك في حذف حسابك نهائياً؟ ستفقد كافة محادثاتك وجهات اتصالك ورقم هاتفك، ولا يمكن التراجع عن هذا الإجراء.");
+      if (!confirmation) return;
+      
+      const secondConfirmation = confirm("تأكيد أخير: اكتب موافق للمتابعة في حذف الحساب.");
+      if (!secondConfirmation) return;
+
+      const user = auth.currentUser;
+      if (!user) {
+        alert("لم يتم العثور على مستخدم مسجل الدخول!");
+        return;
+      }
+
+      try {
+        const uid = user.uid;
+        const userRef = ref(db, `users/${uid}`);
+        
+        // If phone user, delete phone registry entry
+        if (currentUserData && currentUserData.phone) {
+          const phoneRef = ref(db, `phones/${currentUserData.phone}`);
+          await set(phoneRef, null);
+        }
+        
+        // Remove presence
+        await set(ref(db, `users/${uid}/online`), null);
+        
+        // Delete from DB
+        await set(userRef, null);
+        
+        // Delete from Auth
+        await deleteUser(user);
+        
+        alert("تم حذف حسابك وجميع بياناتك بنجاح. شكراً لاستخدامك تطبيقنا!");
+        window.location.reload();
+      } catch (err) {
+        console.error("Error during account deletion: ", err);
+        if (err.code === "auth/requires-recent-login") {
+          alert("لحماية حسابك، يتطلب هذا الإجراء تسجيل الدخول مجدداً حديثاً. يرجى تسجيل الخروج ثم إعادة تسجيل الدخول والمحاولة مرة أخرى.");
+        } else {
+          alert("حدث خطأ أثناء حذف الحساب: " + err.message);
+        }
+      }
     }
 
     function formatMessageTime(timestamp) {
