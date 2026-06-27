@@ -2151,7 +2151,9 @@
                 chatId: chatId,
                 otherUserId: otherUserId,
                 lastMessage: chatVal.lastMessage || "",
-                lastMessageTime: chatVal.lastMessageTime || 0
+                lastMessageTime: chatVal.lastMessageTime || 0,
+                lastSenderId: chatVal.lastSenderId || "",
+                lastMessageRead: chatVal.lastMessageRead !== undefined ? chatVal.lastMessageRead : true
               });
             }
           });
@@ -2186,6 +2188,13 @@
         const color = otherUser.avatar || "#007aff";
         const msgTimeStr = chat.lastMessageTime ? formatMessageTime(chat.lastMessageTime) : "";
         
+        let listCheckmarks = "";
+        if (chat.lastSenderId === currentUserId && chat.lastMessage) {
+          const checkSymbol = chat.lastMessageRead === true ? "✓✓" : "✓";
+          const colorSymbol = chat.lastMessageRead === true ? "#30d158" : "rgba(255, 255, 255, 0.4)";
+          listCheckmarks = `<span style="color: ${colorSymbol}; font-weight: bold; margin-left: 5px; font-size: 11px; display: inline-block; vertical-align: middle;">${checkSymbol}</span>`;
+        }
+
         item.innerHTML = `
           <div class="avatar" style="background-color: ${color};">${initials}</div>
           <div class="item-details">
@@ -2193,7 +2202,10 @@
               <span class="item-name">${otherUser.username}</span>
               <span class="item-time">${msgTimeStr}</span>
             </div>
-            <div class="item-subtext">${chat.lastMessage || "بدء المحادثة..."}</div>
+            <div class="item-subtext" style="display: flex; align-items: center; justify-content: flex-start;">
+              ${listCheckmarks}
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${chat.lastMessage || "بدء المحادثة..."}</span>
+            </div>
           </div>
         `;
         chatsListDiv.appendChild(item);
@@ -2268,7 +2280,7 @@
     // ==========================================
     // Message listener for Realtime Syncing
     // ==========================================
-    function startMessagesSync() {
+     function startMessagesSync() {
       // Clear previous message active listener
       if (activeChatListener) {
         activeChatListener();
@@ -2283,25 +2295,56 @@
         msgBox.innerHTML = "";
         
         if (snapshot.exists()) {
+          const updates = {};
+          let needsUpdate = false;
+
           snapshot.forEach((childSnap) => {
+            const msgKey = childSnap.key;
             const msg = childSnap.val();
             const isSelf = msg.senderId === currentUserId;
             
+            // Mark as read if received from the other user and not read yet
+            if (!isSelf && msg.read !== true) {
+              updates[`${msgKey}/read`] = true;
+              needsUpdate = true;
+            }
+
             const bubble = document.createElement("div");
             bubble.className = "message-bubble " + (isSelf ? "self" : "other");
             
             const msgTime = msg.timestamp ? formatMessageTime(msg.timestamp) : "";
             
+            let checkmarks = "";
+            if (isSelf) {
+              const isRead = msg.read === true;
+              const checkSymbol = isRead ? "✓✓" : "✓";
+              const colorSymbol = isRead ? "#30d158" : "rgba(255, 255, 255, 0.4)";
+              checkmarks = `<span class="read-status" style="font-size: 11px; margin-right: 4px; color: ${colorSymbol}; font-weight: bold; vertical-align: middle;">${checkSymbol}</span>`;
+            }
+
             bubble.innerHTML = `
               <div class="message-text">${escapeHtml(msg.text)}</div>
               <div class="message-meta">
                 <span>${msgTime}</span>
-                ${isSelf ? '<span style="font-size:8px;">✓✓</span>' : ''}
+                ${checkmarks}
               </div>
             `;
             
             msgBox.appendChild(bubble);
           });
+
+          if (needsUpdate) {
+            update(ref(db, `messages/${activeChatId}`), updates).catch(err => {
+              console.error("Error updating read receipt: ", err);
+            });
+            
+            // Also update parent chat room record so last message shows double checkmark
+            update(ref(db, `chats/${activeChatId}`), {
+              lastMessageRead: true
+            }).catch(err => {
+              console.error("Error updating parent chat: ", err);
+            });
+          }
           
           // Auto scroll to latest bubble at the bottom
           setTimeout(() => {
@@ -2335,7 +2378,8 @@
         const msgPayload = {
           senderId: currentUserId,
           text: msgText,
-          timestamp: timestamp
+          timestamp: timestamp,
+          read: false
         };
 
         // Write message packet
@@ -2346,7 +2390,9 @@
         await update(chatRef, {
           participants: [currentUserId, activeChatUserId],
           lastMessage: msgText,
-          lastMessageTime: timestamp
+          lastMessageTime: timestamp,
+          lastSenderId: currentUserId,
+          lastMessageRead: false
         });
 
       } catch (err) {
