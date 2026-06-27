@@ -835,6 +835,29 @@
       margin-left: -4px;
     }
 
+    .read-status {
+      display: inline-block;
+      transition: color 0.3s ease;
+    }
+
+    .read-status.read {
+      animation: checkmarkPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    }
+
+    @keyframes checkmarkPop {
+      0% {
+        transform: scale(0.6);
+        opacity: 0.5;
+      }
+      50% {
+        transform: scale(1.4);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
     /* Bottom Chat Input Bar */
     .chat-input-bar {
       background-color: var(--bg-menu);
@@ -911,6 +934,47 @@
 
     .send-btn:active {
       transform: scale(0.95);
+    }
+
+    .record-btn {
+      background-color: #5856d6;
+      color: white;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 18px;
+      flex-shrink: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .record-btn:hover {
+      background-color: #4745b4;
+      transform: scale(1.05);
+    }
+
+    .record-btn.recording {
+      background-color: #ff453a !important;
+      animation: pulseRedButton 1.2s infinite;
+      transform: scale(1.15);
+    }
+
+    @keyframes pulseRedButton {
+      0% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 69, 58, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0); }
+    }
+
+    @keyframes pulseRed {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.6; }
     }
 
     /* ---------------------------------- */
@@ -1404,14 +1468,27 @@
           <!-- Bottom Chat Input Bar -->
           <div class="chat-input-bar">
             <!-- Emoji Picker trigger button -->
-            <button class="emoji-btn" onclick="toggleEmojiPicker()" title="إيموجي">😊</button>
+            <button class="emoji-btn" id="emoji-trigger-btn" onclick="toggleEmojiPicker()" title="إيموجي">😊</button>
             
-            <div class="chat-input-wrapper">
+            <div class="chat-input-wrapper" id="chat-input-container">
               <textarea id="chat-message-input" placeholder="اكتب رسالة..." onkeydown="handleInputKeydown(event)"></textarea>
             </div>
 
+            <!-- Live recording status display (hidden by default) -->
+            <div id="recording-status-overlay" style="display: none; align-items: center; justify-content: space-between; flex-grow: 1; background: rgba(255, 69, 58, 0.1); padding: 8px 12px; border-radius: 20px; margin: 0 8px;">
+              <div style="display: flex; align-items: center; gap: 8px; color: #ff453a; font-weight: bold; font-size: 13px;">
+                <span class="recording-pulse-dot" style="width: 10px; height: 10px; background-color: #ff453a; border-radius: 50%; display: inline-block; animation: pulseRed 1s infinite;"></span>
+                <span>جاري تسجيل صوتي...</span>
+                <span id="recording-timer-label">0:00</span>
+              </div>
+              <button id="cancel-record-btn" onclick="cancelAudioRecording()" style="background: none; border: none; color: #ff453a; font-size: 13px; cursor: pointer; padding: 4px; font-weight: bold; font-family: inherit;" title="إلغاء التسجيل">❌ إلغاء</button>
+            </div>
+
             <!-- Send button -->
-            <button class="send-btn" onclick="sendMessage()" title="إرسال">➤</button>
+            <button class="send-btn" id="send-msg-btn" onclick="sendMessage()" title="إرسال">➤</button>
+
+            <!-- Record button -->
+            <button class="record-btn" id="voice-record-btn" title="سجل رسالة صوتية">🎤</button>
 
             <!-- Emoji Picker Popup -->
             <div class="emoji-picker-container" id="emoji-picker">
@@ -2078,8 +2155,14 @@
         const user = allUsersCache[uid];
         
         // Apply search query filter if exists
-        if (searchQuery && !user.username.toLowerCase().includes(searchQuery.toLowerCase())) {
-          return;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const uMatch = user.username && user.username.toLowerCase().includes(q);
+          const eMatch = user.email && user.email.toLowerCase().includes(q);
+          const pMatch = user.phone && user.phone.toLowerCase().includes(q);
+          if (!uMatch && !eMatch && !pMatch) {
+            return;
+          }
         }
 
         count++;
@@ -2175,8 +2258,14 @@
         if (!otherUser) return; // wait till user profile loaded in cache
         
         // Apply search query filter
-        if (searchQuery && !otherUser.username.toLowerCase().includes(searchQuery.toLowerCase())) {
-          return;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const uMatch = otherUser.username && otherUser.username.toLowerCase().includes(q);
+          const eMatch = otherUser.email && otherUser.email.toLowerCase().includes(q);
+          const pMatch = otherUser.phone && otherUser.phone.toLowerCase().includes(q);
+          if (!uMatch && !eMatch && !pMatch) {
+            return;
+          }
         }
 
         count++;
@@ -2319,11 +2408,31 @@
               const isRead = msg.read === true;
               const checkSymbol = isRead ? "✓✓" : "✓";
               const colorSymbol = isRead ? "#30d158" : "rgba(255, 255, 255, 0.4)";
-              checkmarks = `<span class="read-status" style="font-size: 11px; margin-right: 4px; color: ${colorSymbol}; font-weight: bold; vertical-align: middle;">${checkSymbol}</span>`;
+              checkmarks = `<span class="read-status ${isRead ? 'read' : ''}" style="font-size: 11px; margin-right: 4px; color: ${colorSymbol}; font-weight: bold; vertical-align: middle;">${checkSymbol}</span>`;
+            }
+
+            let msgContentHtml = "";
+            if (msg.voice) {
+              msgContentHtml = `
+                <div class="voice-player" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 12px; margin-bottom: 4px; min-width: 220px; direction: ltr;">
+                  <button onclick="toggleVoicePlay(this, '${msg.voice}')" style="background: var(--accent); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; flex-shrink: 0; outline: none; transition: transform 0.2s;">▶</button>
+                  <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; min-width: 130px;">
+                    <div style="height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; position: relative;">
+                      <div class="voice-progress-bar" style="width: 0%; height: 100%; background: #30d158; transition: width 0.1s linear;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.7); font-family: sans-serif;">
+                      <span>🎙️ Voice Note</span>
+                      <span class="voice-duration">0:00</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else {
+              msgContentHtml = `<div class="message-text">${escapeHtml(msg.text)}</div>`;
             }
 
             bubble.innerHTML = `
-              <div class="message-text">${escapeHtml(msg.text)}</div>
+              ${msgContentHtml}
               <div class="message-meta">
                 <span>${msgTime}</span>
                 ${checkmarks}
@@ -2485,6 +2594,244 @@
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
+
+    // ==========================================
+    // Voice Recorder and Player Integrations
+    // ==========================================
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecordingActive = false;
+    let recordingTimerInterval = null;
+    let recordingStartTime = 0;
+    
+    // Global player tracking
+    let currentPlayingAudio = null;
+    let currentPlayingButton = null;
+
+    function formatAudioTime(secs) {
+      if (isNaN(secs)) return "0:00";
+      const m = Math.floor(secs / 60);
+      const s = Math.floor(secs % 60).toString().padStart(2, "0");
+      return `${m}:${s}`;
+    }
+
+    window.toggleVoicePlay = function(btn, base64Src) {
+      if (currentPlayingAudio) {
+        currentPlayingAudio.pause();
+        if (currentPlayingButton) {
+          currentPlayingButton.textContent = "▶";
+        }
+        if (currentPlayingAudio.src === base64Src || currentPlayingAudio.src === window.location.href + base64Src) {
+          currentPlayingAudio = null;
+          currentPlayingButton = null;
+          return;
+        }
+      }
+
+      const audio = new Audio(base64Src);
+      currentPlayingAudio = audio;
+      currentPlayingButton = btn;
+      btn.textContent = "⏸";
+
+      const progressBar = btn.parentElement.querySelector(".voice-progress-bar");
+      const durationSpan = btn.parentElement.querySelector(".voice-duration");
+
+      audio.addEventListener("timeupdate", () => {
+        if (audio.duration) {
+          const pct = (audio.currentTime / audio.duration) * 100;
+          progressBar.style.width = pct + "%";
+          durationSpan.textContent = formatAudioTime(audio.currentTime);
+        }
+      });
+
+      audio.addEventListener("loadedmetadata", () => {
+        durationSpan.textContent = formatAudioTime(audio.duration);
+      });
+
+      audio.addEventListener("ended", () => {
+        btn.textContent = "▶";
+        progressBar.style.width = "0%";
+        durationSpan.textContent = formatAudioTime(audio.duration || 0);
+        if (currentPlayingAudio === audio) {
+          currentPlayingAudio = null;
+          currentPlayingButton = null;
+        }
+      });
+
+      audio.play().catch(err => {
+        console.error("Error playing audio: ", err);
+        btn.textContent = "▶";
+      });
+    };
+
+    function initVoiceRecorder() {
+      const recordBtn = document.getElementById("voice-record-btn");
+      if (!recordBtn) return;
+
+      let startRecordingTriggered = false;
+
+      function onStartRecording(e) {
+        e.preventDefault();
+        if (isRecordingActive) return;
+        
+        startRecordingTriggered = true;
+        startAudioRecording();
+      }
+
+      function onStopRecording(e) {
+        e.preventDefault();
+        if (!isRecordingActive) return;
+        
+        startRecordingTriggered = false;
+        stopAudioRecording(true); // send is true
+      }
+
+      // Touch handlers (mobile layout)
+      recordBtn.addEventListener("touchstart", onStartRecording, { passive: false });
+      recordBtn.addEventListener("touchend", onStopRecording, { passive: false });
+      recordBtn.addEventListener("touchcancel", (e) => {
+        if (isRecordingActive && startRecordingTriggered) {
+          stopAudioRecording(false);
+        }
+      }, { passive: false });
+
+      // Mouse handlers (desktop layout)
+      recordBtn.addEventListener("mousedown", onStartRecording);
+      recordBtn.addEventListener("mouseup", onStopRecording);
+      recordBtn.addEventListener("mouseleave", (e) => {
+        if (isRecordingActive && startRecordingTriggered) {
+          onStopRecording(e);
+        }
+      });
+      
+      // Fallback single-click toggling
+      recordBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (!isRecordingActive && !startRecordingTriggered) {
+          startAudioRecording();
+        } else if (isRecordingActive && !startRecordingTriggered) {
+          stopAudioRecording(true);
+        }
+      });
+    }
+
+    async function startAudioRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+          
+          if (audioChunks.length === 0) return;
+          
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          if (audioBlob.size < 1000) {
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = () => {
+            const base64Data = reader.result;
+            sendVoiceMessage(base64Data);
+          };
+        };
+
+        mediaRecorder.start();
+        isRecordingActive = true;
+        recordingStartTime = Date.now();
+
+        // Update UI
+        document.getElementById("voice-record-btn").classList.add("recording");
+        document.getElementById("chat-input-container").style.display = "none";
+        document.getElementById("emoji-trigger-btn").style.display = "none";
+        document.getElementById("send-msg-btn").style.display = "none";
+        document.getElementById("recording-status-overlay").style.display = "flex";
+        
+        // Timer countdown
+        document.getElementById("recording-timer-label").textContent = "0:00";
+        recordingTimerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+          document.getElementById("recording-timer-label").textContent = formatAudioTime(elapsed);
+        }, 1000);
+
+      } catch (err) {
+        console.error("Recording error: ", err);
+        alert("لم نتمكن من الوصول للميكروفون. يرجى تفعيل أذونات التسجيل.");
+      }
+    }
+
+    function stopAudioRecording(shouldSend) {
+      if (!isRecordingActive) return;
+      
+      isRecordingActive = false;
+      clearInterval(recordingTimerInterval);
+
+      document.getElementById("voice-record-btn").classList.remove("recording");
+      document.getElementById("recording-status-overlay").style.display = "none";
+      document.getElementById("chat-input-container").style.display = "block";
+      document.getElementById("emoji-trigger-btn").style.display = "block";
+      document.getElementById("send-msg-btn").style.display = "block";
+
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        if (!shouldSend) {
+          mediaRecorder.onstop = () => {
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+          };
+        }
+        mediaRecorder.stop();
+      }
+    }
+
+    window.cancelAudioRecording = function() {
+      stopAudioRecording(false);
+    };
+
+    async function sendVoiceMessage(base64Audio) {
+      if (!activeChatId) return;
+
+      try {
+        const msgRef = ref(db, `messages/${activeChatId}`);
+        const newMsgKey = push(msgRef).key;
+        
+        const timestamp = Date.now();
+        const msgPayload = {
+          senderId: currentUserId,
+          text: "[رسالة صوتية]",
+          voice: base64Audio,
+          timestamp: timestamp,
+          read: false
+        };
+
+        await set(ref(db, `messages/${activeChatId}/${newMsgKey}`), msgPayload);
+
+        const chatRef = ref(db, `chats/${activeChatId}`);
+        await update(chatRef, {
+          participants: [currentUserId, activeChatUserId],
+          lastMessage: "🎙️ رسالة صوتية",
+          lastMessageTime: timestamp,
+          lastSenderId: currentUserId,
+          lastMessageRead: false
+        });
+
+      } catch (err) {
+        console.error("Error sending voice: ", err);
+        alert("فشل إرسال الرسالة الصوتية.");
+      }
+    }
+
+    // Boot initialize recording triggers
+    document.addEventListener("DOMContentLoaded", () => {
+      initVoiceRecorder();
+    });
   </script>
 </body>
 </html>

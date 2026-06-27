@@ -2,6 +2,8 @@ package com.example
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -19,6 +21,20 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+    
+    // Request microphone recording permissions
+    try {
+      requestPermissions(
+        arrayOf(
+          android.Manifest.permission.RECORD_AUDIO,
+          android.Manifest.permission.MODIFY_AUDIO_SETTINGS
+        ),
+        101
+      )
+    } catch (e: Exception) {
+      e.printStackTrace()
+    }
+
     setContent {
       Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         TelegramWebView(
@@ -49,6 +65,15 @@ fun TelegramWebView(modifier: Modifier = Modifier) {
           allowFileAccess = true
         }
         webViewClient = WebViewClient()
+        webChromeClient = object : WebChromeClient() {
+          override fun onPermissionRequest(request: PermissionRequest?) {
+            try {
+              request?.grant(request.resources)
+            } catch (e: Exception) {
+              e.printStackTrace()
+            }
+          }
+        }
         loadUrl("file:///android_asset/index.html")
       }
     }
