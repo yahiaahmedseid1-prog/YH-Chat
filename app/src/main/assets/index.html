@@ -2014,7 +2014,10 @@
       hideAuthAlert();
 
       const emailVal = document.getElementById("auth-email").value.trim();
-      const phoneVal = document.getElementById("auth-phone").value.trim();
+      let phoneVal = document.getElementById("auth-phone").value.trim();
+      if (currentAuthTab === "phone") {
+        phoneVal = phoneVal.replace(/\D/g, ""); // Strip all non-digit characters (+, spaces, dashes)
+      }
       const passwordVal = document.getElementById("auth-password").value;
       const usernameVal = document.getElementById("auth-username").value.trim() || "مستعمل";
 
@@ -2046,6 +2049,10 @@
           // ------------------------------------
           // Custom Phone & Password Workflow
           // ------------------------------------
+          if (!phoneVal) {
+            throw new Error("يرجى إدخال رقم الهاتف أولاً.");
+          }
+
           if (isSignupMode) {
             // Validation check: ensure digits are entered
             if (!/^\d{8,15}$/.test(phoneVal)) {
@@ -2076,10 +2083,15 @@
             
             showAuthAlert("تم تسجيل حسابك بالهاتف بنجاح! جاري الدخول...", "success");
           } else {
+            // Validation check during login as well
+            if (!/^\d{8,15}$/.test(phoneVal)) {
+              throw new Error("رقم الهاتف غير صالح. يجب أن يتكون من 8 إلى 15 رقماً.");
+            }
+
             // Log In using Phone
             const phoneSnapshot = await get(ref(db, `phones/${phoneVal}`));
             if (!phoneSnapshot.exists()) {
-              throw new Error("رقم الهاتف هذا غير مسجل لدينا! يرجى التحقق أو إنشاء حساب.");
+              throw new Error("رقم الهاتف هذا غير مسجل لدينا! يرجى التحقق أو إنشاء حساب جديد.");
             }
 
             const mappedUid = phoneSnapshot.val();
@@ -2685,7 +2697,7 @@
       const input = document.getElementById("chat-message-input");
       const msgText = input.value.trim();
       
-      if (!msgText || !activeChatId) return;
+      if (!msgText || !activeChatId || !activeChatUserId || !currentUserId) return;
 
       // Clear typing indicator status instantly
       clearTypingStatus();
@@ -2804,8 +2816,8 @@
               </div>
             `;
           } else {
-            // Revert back to original status
-            statusEl.textContent = activeChatUserData.phone ? "عبر الهاتف" : "عبر البريد";
+            // Revert back to original status safely
+            statusEl.textContent = (activeChatUserData && activeChatUserData.phone) ? "عبر الهاتف" : "عبر البريد";
           }
         }
       });
