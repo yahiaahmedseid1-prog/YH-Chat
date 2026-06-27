@@ -977,6 +977,37 @@
       100% { transform: scale(0.9); opacity: 0.6; }
     }
 
+    /* Typing indicator CSS styles */
+    .typing-indicator-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      color: #30d158;
+      font-weight: 500;
+    }
+
+    .typing-dot {
+      width: 4px;
+      height: 4px;
+      background-color: #30d158;
+      border-radius: 50%;
+      display: inline-block;
+      animation: typingDotBlink 1.4s infinite both;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typingDotBlink {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
     /* ---------------------------------- */
     /* Right Panel: Chat Info (Right Sidebar) */
     /* ---------------------------------- */
@@ -1467,11 +1498,17 @@
 
           <!-- Bottom Chat Input Bar -->
           <div class="chat-input-bar">
+            <!-- Hidden File Input for images -->
+            <input type="file" id="chat-image-input" accept="image/*" style="display: none;" onchange="handleImageFileSelect(event)">
+            
+            <!-- Image Attachment button -->
+            <button class="emoji-btn" id="image-trigger-btn" onclick="triggerImageFileSelect()" title="إرفاق صورة">📷</button>
+
             <!-- Emoji Picker trigger button -->
             <button class="emoji-btn" id="emoji-trigger-btn" onclick="toggleEmojiPicker()" title="إيموجي">😊</button>
             
             <div class="chat-input-wrapper" id="chat-input-container">
-              <textarea id="chat-message-input" placeholder="اكتب رسالة..." onkeydown="handleInputKeydown(event)"></textarea>
+              <textarea id="chat-message-input" placeholder="اكتب رسالة..." onkeydown="handleInputKeydown(event)" oninput="handleInput()"></textarea>
             </div>
 
             <!-- Live recording status display (hidden by default) -->
@@ -1630,6 +1667,39 @@
         </div>
       </div>
 
+      <!-- ==================== -->
+      <!-- Image Preview Modal -->
+      <!-- ==================== -->
+      <div class="modal-overlay" id="image-preview-modal">
+        <div class="modal-card" style="max-width: 500px;">
+          <div class="modal-header">
+            <h3>معاينة الصورة قبل الإرسال</h3>
+            <button class="btn-close-modal" onclick="closeImagePreviewModal()">×</button>
+          </div>
+          <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 15px;">
+            <div style="width: 100%; max-height: 300px; border-radius: 12px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; border: 1px solid var(--divider);">
+              <img id="image-preview-element" style="max-width: 100%; max-height: 300px; object-fit: contain;" src="" alt="Preview">
+            </div>
+            <textarea id="image-caption-input" placeholder="أضف تعليقًا..." style="width: 100%; background: var(--bg-main); border: 1px solid var(--divider); border-radius: 12px; color: white; padding: 10px; resize: none; font-size: 14px; text-align: right; direction: rtl; min-height: 60px; outline: none; font-family: inherit;" onkeydown="handleImageCaptionKeydown(event)"></textarea>
+          </div>
+          <div class="modal-footer" style="padding: 12px 20px; background: var(--bg-main); border-top: 1px solid var(--divider); display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="btn-secondary" onclick="closeImagePreviewModal()" style="background: rgba(255,255,255,0.05); color: var(--text-secondary); border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: inherit;">إلغاء</button>
+            <button class="btn-primary" onclick="sendSelectedImage()" style="background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit;">إرسال 🚀</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== -->
+      <!-- Image Fullscreen Viewer Modal -->
+      <!-- ==================== -->
+      <div class="modal-overlay" id="image-viewer-modal" onclick="closeImageViewerModal()" style="background-color: rgba(0,0,0,0.92); z-index: 1100;">
+        <div style="position: relative; max-width: 90%; max-height: 90%; display: flex; flex-direction: column; align-items: center; justify-content: center;" onclick="event.stopPropagation()">
+          <img id="image-viewer-element" style="max-width: 100%; max-height: 80vh; border-radius: 12px; object-fit: contain; box-shadow: 0 8px 32px rgba(0,0,0,0.6);" src="" alt="Full View">
+          <div id="image-viewer-caption" style="color: white; margin-top: 15px; font-size: 15px; text-align: center; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px; max-width: 100%; word-break: break-all; font-family: inherit; direction: rtl;"></div>
+          <button class="btn-close-modal" onclick="closeImageViewerModal()" style="position: absolute; top: -45px; right: 0; font-size: 32px; color: white;">×</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1660,7 +1730,8 @@
       serverTimestamp, 
       update, 
       query, 
-      orderByKey 
+      orderByKey,
+      onDisconnect
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
     // Your web app's Firebase configuration
@@ -1698,6 +1769,9 @@
     let allUsersCache = {};
     let activeChatListener = null;
     let chatsListListener = null;
+    let typingListener = null;
+    let isTypingLocally = false;
+    let typingTimeout = null;
     let currentAuthTab = "email"; // "email" or "phone"
     let isSignupMode = false;
     let currentListTab = "chats"; // "chats" or "users"
@@ -1719,6 +1793,7 @@
     window.insertEmoji = insertEmoji;
     window.sendMessage = sendMessage;
     window.handleInputKeydown = handleInputKeydown;
+    window.handleInput = handleInput;
     window.exitActiveChat = exitActiveChat;
     window.handleSearch = handleSearch;
 
@@ -2364,6 +2439,9 @@
       
       // Load Messages listener
       startMessagesSync();
+
+      // Start real-time typing indicators
+      startTypingListener();
     }
 
     // ==========================================
@@ -2380,12 +2458,16 @@
 
       const messagesRef = ref(db, `messages/${activeChatId}`);
       
+      let isInitialLoad = true;
+      const knownReadMessageKeys = new Set();
+      
       activeChatListener = onValue(messagesRef, (snapshot) => {
         msgBox.innerHTML = "";
         
         if (snapshot.exists()) {
           const updates = {};
           let needsUpdate = false;
+          let playDelivered = false;
 
           snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
@@ -2406,6 +2488,12 @@
             let checkmarks = "";
             if (isSelf) {
               const isRead = msg.read === true;
+              if (isRead) {
+                if (!isInitialLoad && !knownReadMessageKeys.has(msgKey)) {
+                  playDelivered = true;
+                }
+                knownReadMessageKeys.add(msgKey);
+              }
               const checkSymbol = isRead ? "✓✓" : "✓";
               const colorSymbol = isRead ? "#30d158" : "rgba(255, 255, 255, 0.4)";
               checkmarks = `<span class="read-status ${isRead ? 'read' : ''}" style="font-size: 11px; margin-right: 4px; color: ${colorSymbol}; font-weight: bold; vertical-align: middle;">${checkSymbol}</span>`;
@@ -2427,6 +2515,15 @@
                   </div>
                 </div>
               `;
+            } else if (msg.image) {
+              const hasCaption = msg.text && msg.text !== "[صورة]";
+              const captionHtml = hasCaption ? `<div class="message-text" style="margin-top: 8px; font-size: 14px; color: white; word-break: break-word; text-align: right; direction: rtl;">${escapeHtml(msg.text)}</div>` : "";
+              msgContentHtml = `
+                <div class="image-message-wrapper" style="cursor: pointer; max-width: 280px; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.15); padding: 4px; display: flex; flex-direction: column;" onclick="viewImageFullscreen(this)">
+                  <img src="${msg.image}" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; display: block;" onerror="this.src='https://placehold.co/200x150?text=Error'" alt="Image">
+                  ${captionHtml}
+                </div>
+              `;
             } else {
               msgContentHtml = `<div class="message-text">${escapeHtml(msg.text)}</div>`;
             }
@@ -2441,6 +2538,11 @@
             
             msgBox.appendChild(bubble);
           });
+
+          if (playDelivered) {
+            playDeliveredSound();
+          }
+          isInitialLoad = false;
 
           if (needsUpdate) {
             update(ref(db, `messages/${activeChatId}`), updates).catch(err => {
@@ -2461,6 +2563,7 @@
           }, 50);
         } else {
           msgBox.innerHTML = '<div style="text-align:center; padding: 40px; color:var(--text-secondary)">لا توجد رسائل بينكما بعد. أرسل رسالة للبدء! 👋</div>';
+          isInitialLoad = false;
         }
       });
     }
@@ -2474,12 +2577,18 @@
       
       if (!msgText || !activeChatId) return;
 
+      // Clear typing indicator status instantly
+      clearTypingStatus();
+
       // Clear input
       input.value = "";
       input.style.height = "24px";
       toggleEmojiPicker(false);
 
       try {
+        // Play the sent sound immediately for snappy UI feel
+        playSentSound();
+
         const msgRef = ref(db, `messages/${activeChatId}`);
         const newMsgKey = push(msgRef).key;
         
@@ -2518,7 +2627,87 @@
       }
     }
 
+    // Typing status management and indicators
+    function clearTypingStatus() {
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        typingTimeout = null;
+      }
+      if (isTypingLocally && activeChatId && currentUserId) {
+        isTypingLocally = false;
+        set(ref(db, `typing/${activeChatId}/${currentUserId}`), null).catch(err => {
+          console.warn("Error clearing typing status: ", err);
+        });
+      }
+    }
+
+    function handleInput() {
+      const input = document.getElementById("chat-message-input");
+      if (!input || !activeChatId || !currentUserId) return;
+
+      const val = input.value;
+      if (val === "") {
+        clearTypingStatus();
+        return;
+      }
+
+      if (!isTypingLocally) {
+        isTypingLocally = true;
+        
+        // Use set and handle onDisconnect to ensure cleanup if offline/tab closed
+        const statusRef = ref(db, `typing/${activeChatId}/${currentUserId}`);
+        set(statusRef, true).catch(err => {
+          console.warn("Error setting typing status: ", err);
+        });
+        onDisconnect(statusRef).remove();
+      }
+
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+
+      typingTimeout = setTimeout(() => {
+        clearTypingStatus();
+      }, 2500);
+    }
+
+    function startTypingListener() {
+      if (typingListener) {
+        typingListener();
+        typingListener = null;
+      }
+
+      if (!activeChatId || !activeChatUserId) return;
+
+      const typingRef = ref(db, `typing/${activeChatId}/${activeChatUserId}`);
+      typingListener = onValue(typingRef, (snapshot) => {
+        const isTyping = snapshot.val() === true;
+        const statusEl = document.getElementById("active-chat-status");
+        if (statusEl) {
+          if (isTyping) {
+            statusEl.innerHTML = `
+              <div class="typing-indicator-container">
+                <span>يكتب الآن</span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+              </div>
+            `;
+          } else {
+            // Revert back to original status
+            statusEl.textContent = activeChatUserData.phone ? "عبر الهاتف" : "عبر البريد";
+          }
+        }
+      });
+    }
+
     function exitActiveChat() {
+      clearTypingStatus();
+      if (typingListener) {
+        typingListener();
+        typingListener = null;
+      }
+
       document.body.classList.remove("show-chat");
       activeChatUserId = null;
       activeChatId = null;
@@ -2551,6 +2740,11 @@
     // Utility cleanup and helper methods
     // ==========================================
     function cleanupListeners() {
+      clearTypingStatus();
+      if (typingListener) {
+        typingListener();
+        typingListener = null;
+      }
       if (activeChatListener) {
         activeChatListener();
         activeChatListener = null;
@@ -2753,6 +2947,7 @@
         document.getElementById("voice-record-btn").classList.add("recording");
         document.getElementById("chat-input-container").style.display = "none";
         document.getElementById("emoji-trigger-btn").style.display = "none";
+        document.getElementById("image-trigger-btn").style.display = "none";
         document.getElementById("send-msg-btn").style.display = "none";
         document.getElementById("recording-status-overlay").style.display = "flex";
         
@@ -2779,6 +2974,7 @@
       document.getElementById("recording-status-overlay").style.display = "none";
       document.getElementById("chat-input-container").style.display = "block";
       document.getElementById("emoji-trigger-btn").style.display = "block";
+      document.getElementById("image-trigger-btn").style.display = "block";
       document.getElementById("send-msg-btn").style.display = "block";
 
       if (mediaRecorder && mediaRecorder.state !== "inactive") {
@@ -2799,6 +2995,7 @@
       if (!activeChatId) return;
 
       try {
+        playSentSound();
         const msgRef = ref(db, `messages/${activeChatId}`);
         const newMsgKey = push(msgRef).key;
         
@@ -2827,6 +3024,199 @@
         alert("فشل إرسال الرسالة الصوتية.");
       }
     }
+
+    // ==========================================
+    // Web Audio API Synthesizers for Sound Effects
+    // ==========================================
+    let globalAudioCtx = null;
+    function getAudioContext() {
+      if (!globalAudioCtx) {
+        globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (globalAudioCtx.state === 'suspended') {
+        globalAudioCtx.resume();
+      }
+      return globalAudioCtx;
+    }
+
+    window.playSentSound = function() {
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = "sine";
+        // Fast upward frequency sweep for an elegant tactile ping
+        osc.frequency.setValueAtTime(580, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 0.12);
+        
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } catch (err) {
+        console.error("Audio synth error: ", err);
+      }
+    };
+
+    window.playDeliveredSound = function() {
+      try {
+        const ctx = getAudioContext();
+        
+        // First subtle pop/tick tone
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(880, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start();
+        osc1.stop(ctx.currentTime + 0.08);
+
+        // Second tone slightly delayed, slightly higher pitch for a clean dual-tick ping
+        setTimeout(() => {
+          try {
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = "sine";
+            osc2.frequency.setValueAtTime(1150, ctx.currentTime);
+            gain2.gain.setValueAtTime(0.06, ctx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.10);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start();
+            osc2.stop(ctx.currentTime + 0.10);
+          } catch(e) {}
+        }, 65);
+
+      } catch (err) {
+        console.error("Audio synth error: ", err);
+      }
+    };
+
+    // ==========================================
+    // Image Upload, Preview and Fullscreen Viewer
+    // ==========================================
+    let selectedImageBase64 = null;
+
+    window.triggerImageFileSelect = function() {
+      const fileInput = document.getElementById("chat-image-input");
+      if (fileInput) {
+        fileInput.click();
+      }
+    };
+
+    window.handleImageFileSelect = function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Validate file is image
+      if (!file.type.startsWith("image/")) {
+        alert("يرجى اختيار ملف صورة صالح.");
+        return;
+      }
+
+      // Check file size (limit base64 to e.g. 2.5MB to be safe for Realtime DB and performance)
+      if (file.size > 2.5 * 1024 * 1024) {
+        alert("حجم الصورة كبير جداً. يرجى اختيار صورة أقل من 2.5 ميجابايت.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        selectedImageBase64 = e.target.result;
+        
+        // Show preview modal
+        document.getElementById("image-preview-element").src = selectedImageBase64;
+        document.getElementById("image-caption-input").value = "";
+        document.getElementById("image-preview-modal").style.display = "flex";
+        
+        // Auto-focus caption field
+        setTimeout(() => {
+          document.getElementById("image-caption-input").focus();
+        }, 100);
+      };
+      reader.readAsDataURL(file);
+    };
+
+    window.closeImagePreviewModal = function() {
+      document.getElementById("image-preview-modal").style.display = "none";
+      selectedImageBase64 = null;
+      const fileInput = document.getElementById("chat-image-input");
+      if (fileInput) fileInput.value = ""; // Reset
+    };
+
+    window.handleImageCaptionKeydown = function(event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        window.sendSelectedImage();
+      }
+    };
+
+    window.sendSelectedImage = async function() {
+      if (!selectedImageBase64 || !activeChatId) return;
+
+      const captionText = document.getElementById("image-caption-input").value.trim();
+      
+      // Close modal
+      window.closeImagePreviewModal();
+
+      try {
+        playSentSound();
+        const msgRef = ref(db, `messages/${activeChatId}`);
+        const newMsgKey = push(msgRef).key;
+        
+        const timestamp = Date.now();
+        const msgPayload = {
+          senderId: currentUserId,
+          text: captionText || "[صورة]",
+          image: selectedImageBase64,
+          timestamp: timestamp,
+          read: false
+        };
+
+        await set(ref(db, `messages/${activeChatId}/${newMsgKey}`), msgPayload);
+
+        const chatRef = ref(db, `chats/${activeChatId}`);
+        await update(chatRef, {
+          participants: [currentUserId, activeChatUserId],
+          lastMessage: captionText ? `📷 ${captionText}` : "📷 صورة",
+          lastMessageTime: timestamp,
+          lastSenderId: currentUserId,
+          lastMessageRead: false
+        });
+
+      } catch (err) {
+        console.error("Error sending image: ", err);
+        alert("فشل إرسال الصورة.");
+      }
+    };
+
+    window.viewImageFullscreen = function(element) {
+      const img = element.querySelector("img");
+      const captionDiv = element.querySelector(".message-text");
+      
+      if (img) {
+        document.getElementById("image-viewer-element").src = img.src;
+        document.getElementById("image-viewer-caption").textContent = captionDiv ? captionDiv.textContent : "";
+        if (captionDiv && captionDiv.textContent) {
+          document.getElementById("image-viewer-caption").style.display = "block";
+        } else {
+          document.getElementById("image-viewer-caption").style.display = "none";
+        }
+        document.getElementById("image-viewer-modal").style.display = "flex";
+      }
+    };
+
+    window.closeImageViewerModal = function() {
+      document.getElementById("image-viewer-modal").style.display = "none";
+    };
 
     // Boot initialize recording triggers
     document.addEventListener("DOMContentLoaded", () => {
