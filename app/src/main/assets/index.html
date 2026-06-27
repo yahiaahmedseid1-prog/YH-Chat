@@ -1498,12 +1498,6 @@
 
           <!-- Bottom Chat Input Bar -->
           <div class="chat-input-bar">
-            <!-- Hidden File Input for images -->
-            <input type="file" id="chat-image-input" accept="image/*" style="display: none;" onchange="handleImageFileSelect(event)">
-            
-            <!-- Image Attachment button -->
-            <button class="emoji-btn" id="image-trigger-btn" onclick="triggerImageFileSelect()" title="إرفاق صورة">📷</button>
-
             <!-- Emoji Picker trigger button -->
             <button class="emoji-btn" id="emoji-trigger-btn" onclick="toggleEmojiPicker()" title="إيموجي">😊</button>
             
@@ -1511,21 +1505,8 @@
               <textarea id="chat-message-input" placeholder="اكتب رسالة..." onkeydown="handleInputKeydown(event)" oninput="handleInput()"></textarea>
             </div>
 
-            <!-- Live recording status display (hidden by default) -->
-            <div id="recording-status-overlay" style="display: none; align-items: center; justify-content: space-between; flex-grow: 1; background: rgba(255, 69, 58, 0.1); padding: 8px 12px; border-radius: 20px; margin: 0 8px;">
-              <div style="display: flex; align-items: center; gap: 8px; color: #ff453a; font-weight: bold; font-size: 13px;">
-                <span class="recording-pulse-dot" style="width: 10px; height: 10px; background-color: #ff453a; border-radius: 50%; display: inline-block; animation: pulseRed 1s infinite;"></span>
-                <span>جاري تسجيل صوتي...</span>
-                <span id="recording-timer-label">0:00</span>
-              </div>
-              <button id="cancel-record-btn" onclick="cancelAudioRecording()" style="background: none; border: none; color: #ff453a; font-size: 13px; cursor: pointer; padding: 4px; font-weight: bold; font-family: inherit;" title="إلغاء التسجيل">❌ إلغاء</button>
-            </div>
-
             <!-- Send button -->
             <button class="send-btn" id="send-msg-btn" onclick="sendMessage()" title="إرسال">➤</button>
-
-            <!-- Record button -->
-            <button class="record-btn" id="voice-record-btn" title="سجل رسالة صوتية">🎤</button>
 
             <!-- Emoji Picker Popup -->
             <div class="emoji-picker-container" id="emoji-picker">
@@ -1670,28 +1651,6 @@
           <div class="modal-footer">
             <button class="btn-secondary" onclick="closeSettingsModal()">إلغاء</button>
             <button class="btn-primary" onclick="saveUserSettings()">حفظ التعديلات</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ==================== -->
-      <!-- Image Preview Modal -->
-      <!-- ==================== -->
-      <div class="modal-overlay" id="image-preview-modal">
-        <div class="modal-card" style="max-width: 500px;">
-          <div class="modal-header">
-            <h3>معاينة الصورة قبل الإرسال</h3>
-            <button class="btn-close-modal" onclick="closeImagePreviewModal()">×</button>
-          </div>
-          <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 15px;">
-            <div style="width: 100%; max-height: 300px; border-radius: 12px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; border: 1px solid var(--divider);">
-              <img id="image-preview-element" style="max-width: 100%; max-height: 300px; object-fit: contain;" src="" alt="Preview">
-            </div>
-            <textarea id="image-caption-input" placeholder="أضف تعليقًا..." style="width: 100%; background: var(--bg-main); border: 1px solid var(--divider); border-radius: 12px; color: white; padding: 10px; resize: none; font-size: 14px; text-align: right; direction: rtl; min-height: 60px; outline: none; font-family: inherit;" onkeydown="handleImageCaptionKeydown(event)"></textarea>
-          </div>
-          <div class="modal-footer" style="padding: 12px 20px; background: var(--bg-main); border-top: 1px solid var(--divider); display: flex; justify-content: flex-end; gap: 10px;">
-            <button class="btn-secondary" onclick="closeImagePreviewModal()" style="background: rgba(255,255,255,0.05); color: var(--text-secondary); border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: inherit;">إلغاء</button>
-            <button class="btn-primary" onclick="sendSelectedImage()" style="background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit;">إرسال 🚀</button>
           </div>
         </div>
       </div>
