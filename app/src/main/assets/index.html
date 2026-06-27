@@ -484,6 +484,16 @@
       border-radius: 0 14px 14px 0;
     }
 
+    .list-item.unread:not(.active) {
+      background-color: rgba(48, 209, 88, 0.05);
+      border-right: 4px solid #30d158;
+      border-radius: 0 14px 14px 0;
+    }
+
+    .list-item.unread:not(.active):hover {
+      background-color: rgba(48, 209, 88, 0.09);
+    }
+
     .avatar {
       width: 52px;
       height: 52px;
@@ -894,6 +904,18 @@
       color: white;
       border-bottom-right-radius: 4px;
       border: 1px solid rgba(255,255,255,0.01);
+    }
+
+    .message-bubble.other.unread-msg-highlight {
+      background-color: rgba(48, 209, 88, 0.08);
+      border: 1px solid rgba(48, 209, 88, 0.3);
+      animation: unreadPulse 2s ease-in-out infinite, messageEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    @keyframes unreadPulse {
+      0% { box-shadow: 0 0 4px rgba(48, 209, 88, 0.1); }
+      50% { box-shadow: 0 0 12px rgba(48, 209, 88, 0.3); }
+      100% { box-shadow: 0 0 4px rgba(48, 209, 88, 0.1); }
     }
 
     .message-text {
@@ -1481,7 +1503,7 @@
       </div>
 
       <!-- Auth Tab Buttons (Email vs Phone) -->
-      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; text-align: right; padding-right: 4px;"></div>
+      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; text-align: right; padding-right: 4px;">طريقة التحقق:</div>
       <div class="auth-tabs">
         <div class="auth-tab active" id="tab-email" onclick="switchAuthTab('email')">البريد الإلكتروني</div>
         <div class="auth-tab" id="tab-phone" onclick="switchAuthTab('phone')">رقم الهاتف</div>
@@ -1536,6 +1558,11 @@
             <input type="password" id="auth-password" placeholder="••••••••" required>
             <span class="input-icon">🔑</span>
           </div>
+        </div>
+
+        <!-- Forgot Password Link (Login Mode only) -->
+        <div id="forgot-password-link-wrapper" style="text-align: right; margin-top: -8px; margin-bottom: 12px; direction: rtl;">
+          <a href="#" onclick="showRecoveryModal(event)" style="color: var(--accent); font-size: 13px; text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#74a2d6'" onmouseout="this.style.color='var(--accent)'">هل نسيت كلمة المرور؟</a>
         </div>
 
         <!-- Birthdate (Register Mode Only) -->
@@ -1882,6 +1909,71 @@
       </div>
 
       <!-- ==================== -->
+      <!-- Password Recovery Modal -->
+      <!-- ==================== -->
+      <div class="modal-overlay" id="recovery-modal">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>استعادة حسابك</h3>
+            <button class="btn-close-modal" onclick="closeRecoveryModal()">×</button>
+          </div>
+          <div class="modal-body" style="padding: 20px 24px;">
+            <div id="recovery-tabs" class="auth-tabs" style="margin-bottom: 20px;">
+              <div class="auth-tab active" id="recovery-tab-email" onclick="switchRecoveryTab('email')">بالبريد الإلكتروني</div>
+              <div class="auth-tab" id="recovery-tab-phone" onclick="switchRecoveryTab('phone')">برقم الهاتف</div>
+            </div>
+
+            <!-- Email Recovery Form -->
+            <div id="recovery-group-email">
+              <p style="font-size: 13.1px; color: var(--text-secondary); margin-bottom: 15px; direction: rtl; text-align: right; line-height: 1.5;">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لإعادة تعيين كلمة المرور فوراً.</p>
+              <div class="form-group">
+                <label for="recovery-email" style="text-align: right; display: block; margin-bottom: 6px;">البريد الإلكتروني</label>
+                <div class="input-wrapper">
+                  <input type="email" id="recovery-email" placeholder="example@domain.com" style="text-align: left; direction: ltr;">
+                  <span class="input-icon">✉️</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phone Recovery Form -->
+            <div id="recovery-group-phone" style="display: none;">
+              <p style="font-size: 13.1px; color: var(--text-secondary); margin-bottom: 15px; direction: rtl; text-align: right; line-height: 1.5;">لاستعادة حساب مسجل برقم الهاتف، يرجى تأكيد رقم الهاتف المسجل وتاريخ ميلادك المعين بالملف الشخصي لإعادة تعيين كلمة المرور.</p>
+              <div class="form-group">
+                <label for="recovery-phone" style="text-align: right; display: block; margin-bottom: 6px;">رقم الهاتف</label>
+                <div class="input-wrapper">
+                  <input type="text" id="recovery-phone" placeholder="05xxxxxxxx" style="text-align: left; direction: ltr;">
+                  <span class="input-icon">📞</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="recovery-dob" style="text-align: right; display: block; margin-bottom: 6px;">تاريخ الميلاد المسجل</label>
+                <div class="input-wrapper">
+                  <input type="date" id="recovery-dob" style="color-scheme: dark; text-align: right;">
+                  <span class="input-icon">📅</span>
+                </div>
+              </div>
+              <div class="form-group" id="recovery-group-new-password-wrapper" style="display: none;">
+                <label for="recovery-new-password" style="text-align: right; display: block; margin-bottom: 6px; color: #30d158; font-weight: bold;">كلمة المرور الجديدة المطلوبة</label>
+                <div class="input-wrapper">
+                  <input type="password" id="recovery-new-password" placeholder="اكتب كلمة المرور الجديدة" style="text-align: right;">
+                  <span class="input-icon">🔑</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recovery Status Message -->
+            <div id="recovery-alert" class="auth-alert" style="display:none; margin-top: 15px; border-radius: 12px; padding: 12px;">
+              <span class="message" style="direction: rtl; text-align: right; display: block; font-size: 13px;"></span>
+            </div>
+          </div>
+          <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn-secondary" onclick="closeRecoveryModal()">إلغاء</button>
+            <button class="btn-primary" id="btn-recovery-action" onclick="handleRecoveryAction()">إرسال الرابط</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== -->
       <!-- Image Fullscreen Viewer Modal -->
       <!-- ==================== -->
       <div class="modal-overlay" id="image-viewer-modal" onclick="closeImageViewerModal()" style="background-color: rgba(0,0,0,0.92); z-index: 1100;">
@@ -1909,7 +2001,8 @@
       signOut, 
       onAuthStateChanged, 
       updateProfile,
-      deleteUser
+      deleteUser,
+      sendPasswordResetEmail
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
     
     import { 
@@ -1973,6 +2066,7 @@
     
     let authProfilePicBase64 = "";
     let settingsProfilePicBase64 = "";
+    let currentRecoveryTab = "email"; // "email" or "phone"
 
     // Export helpers to global window scope so HTML onclick handles can call them
     window.switchAuthTab = switchAuthTab;
@@ -1981,6 +2075,10 @@
     window.handleSettingsProfilePicChange = handleSettingsProfilePicChange;
     window.confirmDeleteAccount = confirmDeleteAccount;
     window.handleAuthSubmit = handleAuthSubmit;
+    window.showRecoveryModal = showRecoveryModal;
+    window.closeRecoveryModal = closeRecoveryModal;
+    window.switchRecoveryTab = switchRecoveryTab;
+    window.handleRecoveryAction = handleRecoveryAction;
     window.switchListTab = switchListTab;
     window.toggleLeftDrawer = toggleLeftDrawer;
     window.handleLogout = handleLogout;
@@ -2120,6 +2218,9 @@
         groupGender.style.display = "block";
         groupBio.style.display = "block";
         
+        const forgotLink = document.getElementById("forgot-password-link-wrapper");
+        if (forgotLink) forgotLink.style.display = "none";
+
         authUsernameInput.setAttribute("required", "true");
         submitText.textContent = "إنشاء حساب جديد";
       } else {
@@ -2133,6 +2234,9 @@
         groupGender.style.display = "none";
         groupBio.style.display = "none";
         
+        const forgotLink = document.getElementById("forgot-password-link-wrapper");
+        if (forgotLink) forgotLink.style.display = "block";
+
         authUsernameInput.removeAttribute("required");
         submitText.textContent = "تسجيل الدخول";
       }
@@ -2732,9 +2836,11 @@
           }
         }
 
+        const isUnread = chat.lastSenderId !== currentUserId && chat.lastMessageRead === false;
+
         count++;
         const item = document.createElement("div");
-        item.className = "list-item" + (activeChatUserId === chat.otherUserId ? " active" : "");
+        item.className = "list-item" + (activeChatUserId === chat.otherUserId ? " active" : "") + (isUnread ? " unread" : "");
         item.onclick = () => selectUserToChat(chat.otherUserId);
         
         const initials = getInitials(otherUser.username);
@@ -2762,12 +2868,13 @@
           <div class="avatar" style="${avatarStyle}">${avatarContent}${onlineDotHtml}</div>
           <div class="item-details">
             <div class="item-header">
-              <span class="item-name">${otherUser.username}</span>
-              <span class="item-time">${msgTimeStr}</span>
+              <span class="item-name" style="${isUnread ? 'font-weight: 700; color: #fff;' : ''}">${otherUser.username}</span>
+              <span class="item-time" style="${isUnread ? 'color: #30d158; font-weight: bold;' : ''}">${msgTimeStr}</span>
             </div>
-            <div class="item-subtext" style="display: flex; align-items: center; justify-content: flex-start;">
+            <div class="item-subtext" style="display: flex; align-items: center; justify-content: flex-start; ${isUnread ? 'font-weight: 600; color: var(--text-primary);' : ''}">
               ${listCheckmarks}
               <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${chat.lastMessage || "بدء المحادثة..."}</span>
+              ${isUnread ? `<span class="unread-badge-text" style="background-color: #30d158; color: white; border-radius: 10px; padding: 2px 7px; font-size: 10px; font-weight: bold; margin-right: 6px; margin-left: 2px; white-space: nowrap; box-shadow: 0 1px 4px rgba(48,209,88,0.4);">جديدة</span>` : ''}
             </div>
           </div>
         `;
@@ -2866,20 +2973,35 @@
           const updates = {};
           let needsUpdate = false;
           let playDelivered = false;
+          let unreadDividerInserted = false;
 
           snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
             const msg = childSnap.val();
             const isSelf = msg.senderId === currentUserId;
             
+            const isUnreadMessage = !isSelf && msg.read !== true;
+
             // Mark as read if received from the other user and not read yet
-            if (!isSelf && msg.read !== true) {
+            if (isUnreadMessage) {
               updates[`${msgKey}/read`] = true;
               needsUpdate = true;
             }
 
+            if (isUnreadMessage && !unreadDividerInserted) {
+              unreadDividerInserted = true;
+              const divider = document.createElement("div");
+              divider.className = "unread-divider";
+              divider.style = "width: 100%; text-align: center; margin: 16px 0; position: relative; display: flex; align-items: center; justify-content: center;";
+              divider.innerHTML = `
+                <div style="position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(48, 209, 88, 0.2); z-index: 1;"></div>
+                <span style="position: relative; z-index: 2; background-color: var(--bg-main); padding: 4px 14px; border-radius: 20px; font-size: 11px; color: #30d158; border: 1px solid rgba(48, 209, 88, 0.25); font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">رسائل غير مقروءة</span>
+              `;
+              msgBox.appendChild(divider);
+            }
+
             const bubble = document.createElement("div");
-            bubble.className = "message-bubble " + (isSelf ? "self" : "other");
+            bubble.className = "message-bubble " + (isSelf ? "self" : "other") + (isUnreadMessage ? " unread-msg-highlight" : "");
             
             const msgTime = msg.timestamp ? formatMessageTime(msg.timestamp) : "";
             
@@ -3228,6 +3350,215 @@
         element.style.backgroundImage = "";
         element.textContent = getInitials(user ? user.username : "?");
         element.style.backgroundColor = (user && user.avatar) || "#007aff";
+      }
+    }
+
+    function showRecoveryAlert(text, type = "error") {
+      const alertDiv = document.getElementById("recovery-alert");
+      if (!alertDiv) return;
+      alertDiv.style.display = "block";
+      alertDiv.querySelector(".message").textContent = text;
+      if (type === "success") {
+        alertDiv.style.backgroundColor = "rgba(48, 209, 88, 0.15)";
+        alertDiv.style.border = "1px solid rgba(48, 209, 88, 0.3)";
+        alertDiv.style.color = "#30d158";
+      } else {
+        alertDiv.style.backgroundColor = "rgba(255, 69, 58, 0.15)";
+        alertDiv.style.border = "1px solid rgba(255, 69, 58, 0.3)";
+        alertDiv.style.color = "#ff453a";
+      }
+    }
+
+    function hideRecoveryAlert() {
+      const alertDiv = document.getElementById("recovery-alert");
+      if (alertDiv) alertDiv.style.display = "none";
+    }
+
+    function showRecoveryModal(event) {
+      if (event) event.preventDefault();
+      
+      const currentEmailInput = document.getElementById("auth-email").value.trim();
+      const currentPhoneInput = document.getElementById("auth-phone").value.trim();
+      
+      document.getElementById("recovery-email").value = currentEmailInput;
+      document.getElementById("recovery-phone").value = currentPhoneInput;
+      document.getElementById("recovery-dob").value = "";
+      document.getElementById("recovery-new-password").value = "";
+      document.getElementById("recovery-group-new-password-wrapper").style.display = "none";
+
+      hideRecoveryAlert();
+      
+      const actionBtn = document.getElementById("btn-recovery-action");
+      if (actionBtn) actionBtn.disabled = false;
+
+      if (currentAuthTab === "phone") {
+        switchRecoveryTab("phone");
+      } else {
+        switchRecoveryTab("email");
+      }
+
+      document.getElementById("recovery-modal").style.display = "flex";
+    }
+
+    function closeRecoveryModal() {
+      document.getElementById("recovery-modal").style.display = "none";
+    }
+
+    function switchRecoveryTab(type) {
+      currentRecoveryTab = type;
+      hideRecoveryAlert();
+
+      const tabEmail = document.getElementById("recovery-tab-email");
+      const tabPhone = document.getElementById("recovery-tab-phone");
+      const groupEmail = document.getElementById("recovery-group-email");
+      const groupPhone = document.getElementById("recovery-group-phone");
+      const actionBtn = document.getElementById("btn-recovery-action");
+
+      document.getElementById("recovery-group-new-password-wrapper").style.display = "none";
+      if (actionBtn) actionBtn.disabled = false;
+
+      if (type === "email") {
+        if (tabEmail) tabEmail.classList.add("active");
+        if (tabPhone) tabPhone.classList.remove("active");
+        if (groupEmail) groupEmail.style.display = "block";
+        if (groupPhone) groupPhone.style.display = "none";
+        if (actionBtn) actionBtn.textContent = "إرسال الرابط";
+      } else {
+        if (tabPhone) tabPhone.classList.add("active");
+        if (tabEmail) tabEmail.classList.remove("active");
+        if (groupEmail) groupEmail.style.display = "none";
+        if (groupPhone) groupPhone.style.display = "block";
+        if (actionBtn) actionBtn.textContent = "تحقق من الهوية";
+      }
+    }
+
+    async function handleRecoveryAction() {
+      hideRecoveryAlert();
+      const actionBtn = document.getElementById("btn-recovery-action");
+
+      if (currentRecoveryTab === "email") {
+        const emailVal = document.getElementById("recovery-email").value.trim();
+        if (!emailVal) {
+          showRecoveryAlert("يرجى إدخال البريد الإلكتروني.");
+          return;
+        }
+
+        if (actionBtn) {
+          actionBtn.disabled = true;
+          actionBtn.textContent = "جاري الإرسال...";
+        }
+
+        try {
+          await sendPasswordResetEmail(auth, emailVal);
+          showRecoveryAlert("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك بنجاح! يرجى مراجعة بريدك الوارد.", "success");
+          if (actionBtn) actionBtn.textContent = "تم الإرسال";
+          setTimeout(() => {
+            closeRecoveryModal();
+          }, 3000);
+        } catch (err) {
+          console.error("Recovery error:", err);
+          let errMsg = "حدث خطأ أثناء إرسال الرابط.";
+          if (err.code === "auth/user-not-found") {
+            errMsg = "لم يتم العثور على حساب مسجل بهذا البريد الإلكتروني.";
+          } else if (err.code === "auth/invalid-email") {
+            errMsg = "صيغة البريد الإلكتروني غير صالحة.";
+          }
+          showRecoveryAlert(errMsg);
+          if (actionBtn) {
+            actionBtn.disabled = false;
+            actionBtn.textContent = "إرسال الرابط";
+          }
+        }
+      } else {
+        let phoneVal = document.getElementById("recovery-phone").value.trim();
+        phoneVal = phoneVal.replace(/\D/g, "");
+        const dobVal = document.getElementById("recovery-dob").value;
+
+        if (!phoneVal) {
+          showRecoveryAlert("يرجى إدخال رقم الهاتف.");
+          return;
+        }
+        if (!dobVal) {
+          showRecoveryAlert("يرجى إدخال تاريخ ميلادك المسجل للتحقق.");
+          return;
+        }
+
+        const newPasswordWrapper = document.getElementById("recovery-group-new-password-wrapper");
+        if (newPasswordWrapper && newPasswordWrapper.style.display === "block") {
+          const newPass = document.getElementById("recovery-new-password").value;
+          if (!newPass || newPass.length < 6) {
+            showRecoveryAlert("يرجى كتابة كلمة مرور جديدة لا تقل عن 6 أحرف.");
+            return;
+          }
+
+          if (actionBtn) {
+            actionBtn.disabled = true;
+            actionBtn.textContent = "جاري تقديم الطلب...";
+          }
+
+          try {
+            await set(ref(db, `recovery_requests/${phoneVal}`), {
+              phone: phoneVal,
+              dob: dobVal,
+              requestedPassword: newPass,
+              timestamp: serverTimestamp()
+            });
+
+            showRecoveryAlert("تم التحقق وتقديم طلب إعادة التعيين بنجاح! يرجى إبلاغ المسؤول لتنشيط كلمة المرور الجديدة الخاصة بك فوراً.", "success");
+            if (actionBtn) actionBtn.textContent = "تم تقديم الطلب";
+            setTimeout(() => {
+              closeRecoveryModal();
+            }, 5000);
+          } catch (e) {
+            console.error("DB Recovery request error:", e);
+            showRecoveryAlert("حدث خطأ أثناء إرسال طلب التغيير.");
+            if (actionBtn) {
+              actionBtn.disabled = false;
+              actionBtn.textContent = "تأكيد وتغيير";
+            }
+          }
+          return;
+        }
+
+        if (actionBtn) {
+          actionBtn.disabled = true;
+          actionBtn.textContent = "جاري التحقق...";
+        }
+
+        try {
+          const phoneSnapshot = await get(ref(db, `phones/${phoneVal}`));
+          if (!phoneSnapshot.exists()) {
+            throw new Error("رقم الهاتف هذا غير مسجل لدينا.");
+          }
+
+          const uid = phoneSnapshot.val();
+          const userSnapshot = await get(ref(db, `users/${uid}`));
+          if (!userSnapshot.exists()) {
+            throw new Error("لم يتم العثور على بيانات الملف الشخصي لهذا الحساب.");
+          }
+
+          const userData = userSnapshot.val();
+          if (!userData.dob) {
+            throw new Error("لم يتم تحديد تاريخ ميلاد لهذا الحساب مسبقاً، يرجى التواصل مع الدعم الفني للاستعادة.");
+          }
+
+          if (userData.dob !== dobVal) {
+            throw new Error("تاريخ الميلاد المدخل غير مطابق للسجل! يرجى التحقق.");
+          }
+
+          showRecoveryAlert("تم التحقق من هويتك بنجاح! يرجى إدخال كلمة المرور الجديدة المطلوبة أدناه.", "success");
+          if (newPasswordWrapper) newPasswordWrapper.style.display = "block";
+          if (actionBtn) {
+            actionBtn.disabled = false;
+            actionBtn.textContent = "تأكيد وتغيير";
+          }
+        } catch (err) {
+          showRecoveryAlert(err.message || "فشل التحقق من الهوية.");
+          if (actionBtn) {
+            actionBtn.disabled = false;
+            actionBtn.textContent = "تحقق من الهوية";
+          }
+        }
       }
     }
 
