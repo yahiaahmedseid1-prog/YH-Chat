@@ -2106,6 +2106,21 @@
         </div>
       </div>
 
+      <!-- ==================== -->
+      <!-- Delete Conversation Confirmation Dialog -->
+      <!-- ==================== -->
+      <div id="delete-chat-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10001; align-items: center; justify-content: center; animation: fadeIn 0.2s ease;" onclick="closeDeleteChatModal()">
+        <div class="context-menu-card" style="background: #17212b; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; width: 90%; max-width: 320px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden; animation: scaleUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); direction: rtl; text-align: center; padding: 20px;" onclick="event.stopPropagation()">
+          <div style="font-size: 36px; margin-bottom: 12px;">🗑️</div>
+          <h3 style="color: white; margin: 0 0 10px 0; font-size: 17px; font-weight: bold;">حذف المحادثة</h3>
+          <p style="color: #8e9ca8; font-size: 13.5px; line-height: 1.5; margin: 0 0 20px 0;">هل أنت متأكد من رغبتك في حذف هذه المحادثة بالكامل؟ سيتم حذف كافة الرسائل والصور المتبادلة نهائياً ولا يمكن التراجع عن هذا الإجراء.</p>
+          <div style="display: flex; gap: 10px; justify-content: center;">
+            <button onclick="executeDeleteChat()" style="background: #ff453a; border: none; border-radius: 11px; color: white; padding: 10px 18px; font-size: 14px; font-weight: bold; cursor: pointer; flex: 1; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#e03e34'" onmouseout="this.style.backgroundColor='#ff453a'">نعم، حذف</button>
+            <button onclick="closeDeleteChatModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 11px; color: #8e9ca8; padding: 10px 18px; font-size: 14px; font-weight: bold; cursor: pointer; flex: 1; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.12)'" onmouseout="this.style.backgroundColor='rgba(255,255,255,0.08)'">إلغاء</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -2440,6 +2455,9 @@
     window.handleInput = handleInput;
     window.exitActiveChat = exitActiveChat;
     window.handleSearch = handleSearch;
+    window.confirmDeleteConversation = confirmDeleteConversation;
+    window.closeDeleteChatModal = closeDeleteChatModal;
+    window.executeDeleteChat = executeDeleteChat;
 
     // ==========================================
     // Lifecycle and Auth State Observers
@@ -3099,7 +3117,7 @@
         if (uid === currentUserId) return; // skip self
         
         const user = allUsersCache[uid];
-        if (!user || !user.username || user.deleted === true) return; // skip deleted / invalid accounts
+        if (!user || !user.username || user.deleted === true || user.deleted === "true" || user.isDeleted === true || user.username === "حساب محذوف" || user.username.includes("محذوف")) return; // skip deleted / invalid accounts
         
         let score = 0;
         let isMatch = true;
@@ -3255,7 +3273,7 @@
           return; // Wait till profiles load
         }
 
-        if (otherUser.deleted === true) {
+        if (otherUser.deleted === true || otherUser.deleted === "true" || otherUser.isDeleted === true || otherUser.username === "حساب محذوف" || otherUser.username.includes("محذوف")) {
           return; // Skip if explicitly deleted
         }
         
@@ -3275,7 +3293,47 @@
         count++;
         const item = document.createElement("div");
         item.className = "list-item" + (activeChatUserId === chat.otherUserId ? " active" : "") + (isUnread ? " unread" : "");
-        item.onclick = () => selectUserToChat(chat.otherUserId);
+        item.style.userSelect = "none";
+        item.style.webkitUserSelect = "none";
+        
+        let pressTimer = null;
+        let longPressTriggered = false;
+
+        const startPress = (e) => {
+          longPressTriggered = false;
+          if (pressTimer) clearTimeout(pressTimer);
+          pressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            if (navigator.vibrate) {
+              navigator.vibrate(50);
+            }
+            confirmDeleteConversation(chat.otherUserId);
+          }, 2000); // 2000 ms = 2 seconds
+        };
+
+        const endPress = (e) => {
+          if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+          }
+        };
+
+        item.addEventListener("mousedown", startPress);
+        item.addEventListener("touchstart", startPress, { passive: true });
+        
+        item.addEventListener("mouseup", endPress);
+        item.addEventListener("mouseleave", endPress);
+        item.addEventListener("touchend", endPress);
+        item.addEventListener("touchmove", endPress, { passive: true });
+
+        item.onclick = (e) => {
+          if (longPressTriggered) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          selectUserToChat(chat.otherUserId);
+        };
         
         const initials = getInitials(otherUser.username);
         const color = otherUser.avatar || "#007aff";
@@ -3354,7 +3412,7 @@
       activeChatUserId = userId;
       activeChatUserData = allUsersCache[userId];
       
-      if (!activeChatUserData) {
+      if (!activeChatUserData || activeChatUserData.deleted === true || activeChatUserData.deleted === "true" || activeChatUserData.isDeleted === true || activeChatUserData.username === "حساب محذوف" || activeChatUserData.username.includes("محذوف")) {
         if (window.isUsersLoaded) {
           alert("عذراً، هذا الحساب تم حذفه.");
           return;
@@ -3851,10 +3909,15 @@
     function updateActiveChatHeaderStatus() {
       if (!activeChatUserId) return;
       const otherUser = allUsersCache[activeChatUserId];
-      if (!otherUser) return;
-
+      
       const statusEl = document.getElementById("active-chat-status");
       if (!statusEl) return;
+
+      if (!otherUser || otherUser.deleted === true || otherUser.deleted === "true" || otherUser.isDeleted === true || otherUser.username === "حساب محذوف" || otherUser.username.includes("محذوف")) {
+        statusEl.textContent = "حساب محذوف";
+        document.getElementById("active-chat-username").textContent = "حساب محذوف";
+        return;
+      }
 
       // Only update if typing indicator is not currently active
       if (statusEl.querySelector(".typing-indicator-container")) {
@@ -4128,6 +4191,51 @@
             actionBtn.textContent = "تحقق من الهوية";
           }
         }
+      }
+    }
+
+    let deleteChatTargetUserId = null;
+
+    function confirmDeleteConversation(userId) {
+      deleteChatTargetUserId = userId;
+      const modal = document.getElementById("delete-chat-modal");
+      if (modal) {
+        modal.style.display = "flex";
+      }
+    }
+
+    function closeDeleteChatModal() {
+      deleteChatTargetUserId = null;
+      const modal = document.getElementById("delete-chat-modal");
+      if (modal) {
+        modal.style.display = "none";
+      }
+    }
+
+    async function executeDeleteChat() {
+      if (!deleteChatTargetUserId || !currentUserId) {
+        closeDeleteChatModal();
+        return;
+      }
+
+      const targetUserId = deleteChatTargetUserId;
+      const targetChatId = [currentUserId, targetUserId].sort().join("_");
+
+      try {
+        await set(ref(db, `chats/${targetChatId}`), null);
+        await set(ref(db, `messages/${targetChatId}`), null);
+        await set(ref(db, `typing/${targetChatId}`), null);
+
+        if (activeChatId === targetChatId) {
+          exitActiveChat();
+        }
+
+        closeDeleteChatModal();
+        renderChatsListHTML();
+      } catch (err) {
+        console.error("Error deleting chat: ", err);
+        alert("حدث خطأ أثناء حذف المحادثة: " + err.message);
+        closeDeleteChatModal();
       }
     }
 
