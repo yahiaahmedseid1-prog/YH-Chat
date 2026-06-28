@@ -1481,6 +1481,49 @@
         to { transform: translateY(0); }
       }
     }
+
+    /* Message Context Menu and Reactions */
+    .reaction-pill {
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.05);
+      user-select: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reaction-pill:hover {
+      background: rgba(255,255,255,0.15);
+      transform: scale(1.05);
+    }
+    .reaction-pill.active {
+      background: rgba(47, 110, 165, 0.35);
+      border-color: var(--accent);
+    }
+    .message-reply-preview {
+      background: rgba(255, 255, 255, 0.05);
+      border-right: 3px solid var(--accent);
+      padding: 6px 10px;
+      border-radius: 6px 4px 4px 6px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: right;
+      direction: rtl;
+      max-width: 100%;
+      overflow: hidden;
+      transition: background 0.2s;
+    }
+    .message-reply-preview:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .context-menu-card button:hover {
+      background: rgba(255, 255, 255, 0.04) !important;
+    }
   </style>
 </head>
 <body>
@@ -1697,6 +1740,18 @@
           <!-- Messages Container -->
           <div class="messages-container" id="chat-messages-box">
             <!-- Messages rendered here dynamically -->
+          </div>
+
+          <!-- Replying/Editing preview container -->
+          <div id="reply-edit-preview-bar" style="display: none; background: rgba(23, 33, 43, 0.95); padding: 8px 16px; border-top: 1px solid var(--divider); align-items: center; justify-content: space-between; direction: rtl; gap: 10px; z-index: 4;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1; overflow: hidden;">
+              <span id="reply-edit-icon" style="font-size: 14px; color: var(--accent);">↩️</span>
+              <div style="display: flex; flex-direction: column; overflow: hidden; text-align: right;">
+                <span id="reply-edit-title" style="font-size: 11px; font-weight: bold; color: var(--accent);">الرد على:</span>
+                <span id="reply-edit-text" style="font-size: 12px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">الرسالة الأصلية...</span>
+              </div>
+            </div>
+            <button onclick="cancelReplyOrEdit()" style="background: none; border: none; color: #8e9ca8; font-size: 16px; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;">✕</button>
           </div>
 
           <!-- Bottom Chat Input Bar -->
@@ -2001,6 +2056,56 @@
         </div>
       </div>
 
+      <!-- ==================== -->
+      <!-- Message Context Menu & Reaction Picker -->
+      <!-- ==================== -->
+      <div id="message-context-menu" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; animation: fadeIn 0.2s ease;" onclick="closeContextMenu()">
+        <div class="context-menu-card" style="background: #17212b; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; width: 90%; max-width: 320px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden; animation: scaleUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); direction: rtl; text-align: right;" onclick="event.stopPropagation()">
+          
+          <!-- Quick Reaction Emojis Row -->
+          <div style="display: flex; justify-content: space-around; padding: 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 24px; gap: 8px;">
+            <span onclick="triggerReaction('👍')" style="cursor: pointer; transition: transform 0.2s; user-select: none;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">👍</span>
+            <span onclick="triggerReaction('❤️')" style="cursor: pointer; transition: transform 0.2s; user-select: none;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">❤️</span>
+            <span onclick="triggerReaction('😂')" style="cursor: pointer; transition: transform 0.2s; user-select: none;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">😂</span>
+            <span onclick="triggerReaction('😮')" style="cursor: pointer; transition: transform 0.2s; user-select: none;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">😮</span>
+            <span onclick="triggerReaction('😢')" style="cursor: pointer; transition: transform 0.2s; user-select: none;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">😢</span>
+            <span onclick="triggerReaction('🙏')" style="cursor: pointer; transition: transform 0.2s; user-select: none;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">🙏</span>
+          </div>
+
+          <!-- Actions List -->
+          <div style="display: flex; flex-direction: column;">
+            <!-- Reply Action (for everyone) -->
+            <button onclick="triggerReply()" style="background: none; border: none; padding: 14px 20px; color: white; text-align: right; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); width: 100%; outline: none; transition: background 0.2s;">
+              <span style="font-size: 16px;">↩️</span>
+              <span>الرد على الرسالة</span>
+            </button>
+
+            <!-- Edit Action (only for sender) -->
+            <button id="menu-action-edit" onclick="triggerEdit()" style="background: none; border: none; padding: 14px 20px; color: white; text-align: right; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); width: 100%; outline: none; transition: background 0.2s;">
+              <span style="font-size: 16px;">✏️</span>
+              <span>تعديل الرسالة</span>
+            </button>
+
+            <!-- Copy Action (only for text messages) -->
+            <button id="menu-action-copy" onclick="triggerCopy()" style="background: none; border: none; padding: 14px 20px; color: white; text-align: right; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); width: 100%; outline: none; transition: background 0.2s;">
+              <span style="font-size: 16px;">📋</span>
+              <span>نسخ النص</span>
+            </button>
+
+            <!-- Delete Action (optional, but nice and only for sender) -->
+            <button id="menu-action-delete" onclick="triggerDelete()" style="background: none; border: none; padding: 14px 20px; color: #ff453a; text-align: right; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 12px; width: 100%; outline: none; transition: background 0.2s;">
+              <span style="font-size: 16px;">🗑️</span>
+              <span>حذف الرسالة</span>
+            </button>
+          </div>
+
+          <!-- Close button -->
+          <div style="background: rgba(0,0,0,0.15); border-top: 1px solid rgba(255,255,255,0.06); padding: 12px; text-align: center;">
+            <button onclick="closeContextMenu()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #8e9ca8; padding: 6px 24px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;">إلغاء</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -2093,6 +2198,204 @@
         window.renderMessagesWithPending();
       }
     }
+
+    // Reply & Edit Globals
+    window.replyingToMessageId = null;
+    window.replyingToMessageData = null;
+    window.editingMessageId = null;
+    window.editingMessageData = null;
+
+    // Helper to get real-time message payload by key
+    window.getMessageData = function(msgKey) {
+      if (!window.lastMessagesSnapshot) return null;
+      let msgData = null;
+      window.lastMessagesSnapshot.forEach((childSnap) => {
+        if (childSnap.key === msgKey) {
+          msgData = childSnap.val();
+        }
+      });
+      if (!msgData && window.localPendingMessages) {
+        msgData = window.localPendingMessages[msgKey];
+      }
+      return msgData;
+    };
+
+    // Open context menu / reaction picker
+    window.openMessageMenu = function(event, msgKey) {
+      event.stopPropagation();
+      const msgData = window.getMessageData(msgKey);
+      if (!msgData) return;
+      
+      const isSelf = msgData.senderId === currentUserId;
+      window.showContextMenu(event, msgKey, msgData, isSelf);
+    };
+
+    let currentContextMenuMessageId = null;
+    let currentContextMenuMessageData = null;
+
+    window.showContextMenu = function(event, msgKey, msgData, isSelf) {
+      currentContextMenuMessageId = msgKey;
+      currentContextMenuMessageData = msgData;
+
+      const menu = document.getElementById("message-context-menu");
+      if (!menu) return;
+
+      // Show or hide Edit button (only text messages can be edited)
+      const editBtn = document.getElementById("menu-action-edit");
+      if (editBtn) {
+        const isText = !msgData.voice && !msgData.image;
+        editBtn.style.display = (isSelf && isText) ? "flex" : "none";
+      }
+
+      // Show or hide Delete button
+      const deleteBtn = document.getElementById("menu-action-delete");
+      if (deleteBtn) {
+        deleteBtn.style.display = isSelf ? "flex" : "none";
+      }
+
+      // Show or hide Copy button (only for text messages)
+      const copyBtn = document.getElementById("menu-action-copy");
+      if (copyBtn) {
+        copyBtn.style.display = (!msgData.voice && !msgData.image) ? "flex" : "none";
+      }
+
+      menu.style.display = "flex";
+    };
+
+    window.closeContextMenu = function() {
+      const menu = document.getElementById("message-context-menu");
+      if (menu) {
+        menu.style.display = "none";
+      }
+    };
+
+    window.triggerReaction = async function(emoji) {
+      if (!currentContextMenuMessageId) return;
+      const msgKey = currentContextMenuMessageId;
+      window.closeContextMenu();
+      await window.handleReactionClick(msgKey, emoji);
+    };
+
+    window.handleReactionClick = async function(msgKey, emoji) {
+      if (!activeChatId || !currentUserId) return;
+      const reactionRef = ref(db, `messages/${activeChatId}/${msgKey}/reactions/${currentUserId}`);
+      const snap = await get(reactionRef);
+      if (snap.exists() && snap.val() === emoji) {
+        await set(reactionRef, null); // remove
+      } else {
+        await set(reactionRef, emoji); // set
+      }
+    };
+
+    window.triggerReply = function() {
+      if (!currentContextMenuMessageId || !currentContextMenuMessageData) return;
+      window.replyingToMessageId = currentContextMenuMessageId;
+      window.replyingToMessageData = currentContextMenuMessageData;
+      window.editingMessageId = null;
+      window.editingMessageData = null;
+
+      // Show reply-edit-preview bar
+      const bar = document.getElementById("reply-edit-preview-bar");
+      const icon = document.getElementById("reply-edit-icon");
+      const title = document.getElementById("reply-edit-title");
+      const text = document.getElementById("reply-edit-text");
+
+      if (bar) {
+        bar.style.display = "flex";
+        if (icon) icon.textContent = "↩️";
+        if (title) title.textContent = "الرد على:";
+        if (text) {
+          text.textContent = currentContextMenuMessageData.text || (currentContextMenuMessageData.voice ? "🎙️ رسالة صوتية" : (currentContextMenuMessageData.image ? "📷 صورة" : "رسالة"));
+        }
+      }
+
+      window.closeContextMenu();
+      
+      // Focus text input
+      const input = document.getElementById("chat-message-input");
+      if (input) input.focus();
+    };
+
+    window.triggerEdit = function() {
+      if (!currentContextMenuMessageId || !currentContextMenuMessageData) return;
+      window.editingMessageId = currentContextMenuMessageId;
+      window.editingMessageData = currentContextMenuMessageData;
+      window.replyingToMessageId = null;
+      window.replyingToMessageData = null;
+
+      // Show reply-edit-preview bar
+      const bar = document.getElementById("reply-edit-preview-bar");
+      const icon = document.getElementById("reply-edit-icon");
+      const title = document.getElementById("reply-edit-title");
+      const text = document.getElementById("reply-edit-text");
+
+      if (bar) {
+        bar.style.display = "flex";
+        if (icon) icon.textContent = "✏️";
+        if (title) title.textContent = "تعديل الرسالة:";
+        if (text) text.textContent = currentContextMenuMessageData.text || "";
+      }
+
+      // Load message content into textarea
+      const input = document.getElementById("chat-message-input");
+      if (input) {
+        input.value = currentContextMenuMessageData.text || "";
+        input.focus();
+        input.style.height = 'auto';
+        input.style.height = input.scrollHeight + 'px';
+      }
+
+      window.closeContextMenu();
+    };
+
+    window.triggerCopy = function() {
+      if (!currentContextMenuMessageData) return;
+      const text = currentContextMenuMessageData.text || "";
+      navigator.clipboard.writeText(text).then(() => {
+        // copied successfully
+      }).catch(err => {
+        console.error("Could not copy text: ", err);
+      });
+      window.closeContextMenu();
+    };
+
+    window.triggerDelete = async function() {
+      if (!currentContextMenuMessageId || !activeChatId) return;
+      if (confirm("هل أنت متأكد من رغبتك في حذف هذه الرسالة؟")) {
+        const msgRef = ref(db, `messages/${activeChatId}/${currentContextMenuMessageId}`);
+        await set(msgRef, null); // remove from RTDB
+      }
+      window.closeContextMenu();
+    };
+
+    window.cancelReplyOrEdit = function() {
+      window.replyingToMessageId = null;
+      window.replyingToMessageData = null;
+      window.editingMessageId = null;
+      window.editingMessageData = null;
+
+      const bar = document.getElementById("reply-edit-preview-bar");
+      if (bar) bar.style.display = "none";
+
+      const input = document.getElementById("chat-message-input");
+      if (input) {
+        input.value = "";
+        input.style.height = "24px";
+      }
+    };
+
+    window.scrollToMessage = function(msgId) {
+      const element = document.getElementById(`msg-${msgId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.style.transition = "background-color 0.5s ease";
+        const originalBg = element.style.backgroundColor;
+        element.style.backgroundColor = "rgba(48, 209, 88, 0.25)";
+        setTimeout(() => {
+          element.style.backgroundColor = originalBg;
+        }, 1200);
+      }
+    };
     
     // Cached users and active listeners reference to prevent duplication
     let allUsersCache = {};
@@ -3092,6 +3395,10 @@
 
             const bubble = document.createElement("div");
             bubble.className = "message-bubble " + (isSelf ? "self" : "other") + (isUnreadMessage ? " unread-msg-highlight" : "");
+            bubble.id = `msg-${msgKey}`;
+            bubble.setAttribute("onclick", `openMessageMenu(event, '${msgKey}')`);
+            bubble.setAttribute("oncontextmenu", `event.preventDefault(); openMessageMenu(event, '${msgKey}')`);
+            bubble.style.cursor = "pointer";
             
             const msgTime = msg.timestamp ? formatMessageTime(msg.timestamp) : "";
             
@@ -3117,8 +3424,8 @@
             let msgContentHtml = "";
             if (msg.voice) {
               msgContentHtml = `
-                <div class="voice-player" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 12px; margin-bottom: 4px; min-width: 220px; direction: ltr;">
-                  <button onclick="toggleVoicePlay(this, '${msg.voice}')" style="background: var(--accent); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; flex-shrink: 0; outline: none; transition: transform 0.2s;">▶</button>
+                <div class="voice-player" onclick="event.stopPropagation()" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 12px; margin-bottom: 4px; min-width: 220px; direction: ltr;">
+                  <button onclick="event.stopPropagation(); toggleVoicePlay(this, '${msg.voice}')" style="background: var(--accent); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; flex-shrink: 0; outline: none; transition: transform 0.2s;">▶</button>
                   <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; min-width: 130px;">
                     <div style="height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; position: relative;">
                       <div class="voice-progress-bar" style="width: 0%; height: 100%; background: #30d158; transition: width 0.1s linear;"></div>
@@ -3134,7 +3441,7 @@
               const hasCaption = msg.text && msg.text !== "[صورة]";
               const captionHtml = hasCaption ? `<div class="message-text" style="margin-top: 8px; font-size: 14px; color: white; word-break: break-word; text-align: right; direction: rtl;">${escapeHtml(msg.text)}</div>` : "";
               msgContentHtml = `
-                <div class="image-message-wrapper" style="cursor: pointer; max-width: 280px; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.15); padding: 4px; display: flex; flex-direction: column;" onclick="viewImageFullscreen(this)">
+                <div class="image-message-wrapper" style="cursor: pointer; max-width: 280px; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.15); padding: 4px; display: flex; flex-direction: column;" onclick="event.stopPropagation(); viewImageFullscreen(this)">
                   <img src="${msg.image}" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; display: block;" onerror="this.src='https://placehold.co/200x150?text=Error'" alt="Image">
                   ${captionHtml}
                 </div>
@@ -3143,12 +3450,57 @@
               msgContentHtml = `<div class="message-text">${escapeHtml(msg.text)}</div>`;
             }
 
+            // Reply display inside bubble
+            let replyToHtml = "";
+            if (msg.replyTo) {
+              replyToHtml = `
+                <div class="message-reply-preview" onclick="event.stopPropagation(); scrollToMessage('${msg.replyTo.id}')">
+                  <div style="font-weight: 800; color: var(--accent); font-size: 11px; margin-bottom: 2px;">${escapeHtml(msg.replyTo.senderName)}</div>
+                  <div style="color: rgba(255,255,255,0.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px;">${escapeHtml(msg.replyTo.text)}</div>
+                </div>
+              `;
+            }
+
+            // Reactions list display inside bubble
+            let reactionsHtml = "";
+            if (msg.reactions) {
+              const emojiCounts = {};
+              const userReactions = {};
+              Object.entries(msg.reactions).forEach(([uid, emoji]) => {
+                if (emoji) {
+                  emojiCounts[emoji] = (emojiCounts[emoji] || 0) + 1;
+                  if (uid === currentUserId) {
+                    userReactions[emoji] = true;
+                  }
+                }
+              });
+
+              if (Object.keys(emojiCounts).length > 0) {
+                reactionsHtml = `<div class="message-reactions-list" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; direction: rtl; justify-content: flex-end;">`;
+                Object.entries(emojiCounts).forEach(([emoji, count]) => {
+                  const isCurrentUserReaction = userReactions[emoji] === true;
+                  const pillBg = isCurrentUserReaction ? "rgba(47, 110, 165, 0.45)" : "rgba(255,255,255,0.12)";
+                  const pillBorder = isCurrentUserReaction ? "1.5px solid var(--accent)" : "1px solid rgba(255,255,255,0.06)";
+                  reactionsHtml += `
+                    <div class="reaction-pill ${isCurrentUserReaction ? 'active' : ''}" onclick="event.stopPropagation(); handleReactionClick('${msgKey}', '${emoji}')" style="background: ${pillBg}; border-radius: 12px; padding: 2px 8px; font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer; border: ${pillBorder}; user-select: none; transition: all 0.2s;">
+                      <span>${emoji}</span>
+                      ${count > 1 ? `<span style="font-size: 10px; font-weight: bold; color: rgba(255,255,255,0.85);">${count}</span>` : ""}
+                    </div>
+                  `;
+                });
+                reactionsHtml += `</div>`;
+              }
+            }
+
             bubble.innerHTML = `
+              ${replyToHtml}
               ${msgContentHtml}
               <div class="message-meta">
+                ${msg.edited ? `<span style="font-size: 9px; color: rgba(255,255,255,0.45); margin-left: 4px; font-style: italic;">معدلة</span>` : ""}
                 <span>${msgTime}</span>
                 ${checkmarks}
               </div>
+              ${reactionsHtml}
             `;
             
             msgBox.appendChild(bubble);
@@ -3197,7 +3549,7 @@
       const input = document.getElementById("chat-message-input");
       const msgText = input.value.trim();
       
-      if (!msgText || !activeChatId || !activeChatUserId || !currentUserId) return;
+      if (!msgText || !activeChatId || !currentUserId) return;
 
       // Clear typing indicator status instantly
       clearTypingStatus();
@@ -3207,6 +3559,30 @@
       input.style.height = "24px";
       toggleEmojiPicker(false);
 
+      // 1. If EDITING mode is active
+      if (window.editingMessageId) {
+        const editId = window.editingMessageId;
+        window.cancelReplyOrEdit();
+        try {
+          const editRef = ref(db, `messages/${activeChatId}/${editId}`);
+          await update(editRef, {
+            text: msgText,
+            edited: true
+          });
+
+          // Update parent chat status info
+          const chatRef = ref(db, `chats/${activeChatId}`);
+          await update(chatRef, {
+            lastMessage: msgText
+          });
+        } catch (err) {
+          console.error("Error editing message: ", err);
+          alert("فشل تعديل الرسالة.");
+        }
+        return;
+      }
+
+      // 2. Normal send / Reply send
       let newMsgKey = null;
       try {
         // Play the sent sound immediately for snappy UI feel
@@ -3222,6 +3598,17 @@
           timestamp: timestamp,
           read: false
         };
+
+        // Add reply context if replying
+        if (window.replyingToMessageId && window.replyingToMessageData) {
+          msgPayload.replyTo = {
+            id: window.replyingToMessageId,
+            senderId: window.replyingToMessageData.senderId,
+            senderName: window.replyingToMessageData.senderId === currentUserId ? "أنت" : (activeChatUserData ? activeChatUserData.username : "مستخدم"),
+            text: window.replyingToMessageData.text || (window.replyingToMessageData.voice ? "🎙️ رسالة صوتية" : (window.replyingToMessageData.image ? "📷 صورة" : "رسالة"))
+          };
+          window.cancelReplyOrEdit();
+        }
 
         addPendingMessage(newMsgKey, msgPayload);
 
