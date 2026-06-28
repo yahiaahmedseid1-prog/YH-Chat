@@ -26,14 +26,19 @@ jobs:
         run: |
           if [ -f debug.keystore.base64 ]; then
             echo "Decoding debug.keystore.base64..."
-            base64 -d debug.keystore.base64 > debug.keystore
+            base64 -d debug.keystore.base64 > debug.keystore || base64 --decode debug.keystore.base64 > debug.keystore || openssl base64 -d -A -in debug.keystore.base64 -out debug.keystore
           else
             echo "No debug.keystore.base64 found. Generating a new debug keystore..."
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
       - name: Make Gradlew Executable
-        run: chmod +x gradlew
+        run: |
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+          else
+            echo "gradlew not found in repository root. Will use installed Gradle."
+          fi
 
       - name: Create Environment Secrets File
         run: |
@@ -46,10 +51,18 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
+          gradle-version: '9.3.1'
           gradle-home-cache-cleanup: true
 
-      - name: Build Debug APK with Gradle Wrapper
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Build Debug APK
+        run: |
+          if [ -f gradlew ]; then
+            echo "Building with local Gradle Wrapper..."
+            ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          else
+            echo "Building with installed Gradle 9.3.1..."
+            gradle :app:assembleDebug --no-daemon --stacktrace
+          fi
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
