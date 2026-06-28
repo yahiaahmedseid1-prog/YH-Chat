@@ -86,47 +86,48 @@
     }
 
     .auth-card {
-      background: rgba(23, 33, 43, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(23, 33, 43, 0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border-radius: 24px;
-      padding: 32px 28px;
+      padding: 28px 24px;
       width: 100%;
-      max-width: 410px;
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45), 
+      max-width: 390px;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.5), 
                   inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.07);
       animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
+      from { opacity: 0; transform: translateY(15px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     .auth-logo {
       display: flex;
-      flex-direction: row-reverse;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 16px;
-      margin-bottom: 24px;
+      gap: 10px;
+      margin-bottom: 22px;
+      text-align: center;
     }
 
     .auth-logo .icon {
       background: linear-gradient(135deg, #5288c1, #2f6ea5);
       color: white;
-      width: 52px;
-      height: 52px;
+      width: 56px;
+      height: 56px;
       border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
-      box-shadow: 0 8px 20px rgba(47, 110, 165, 0.25);
-      margin-bottom: 0;
-      transform: rotate(6deg);
-      transition: all 0.3s ease;
+      font-size: 26px;
+      box-shadow: 0 8px 20px rgba(47, 110, 165, 0.35);
+      margin-bottom: 2px;
+      transform: rotate(-3deg);
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
     .auth-logo .icon:hover {
@@ -135,61 +136,61 @@
 
     .auth-logo h1 {
       font-size: 24px;
-      font-weight: 800;
+      font-weight: 850;
       color: #ffffff;
       margin: 0;
-      text-align: right;
+      letter-spacing: -0.5px;
     }
 
     .auth-logo p {
-      font-size: 12px;
-      color: var(--text-secondary);
+      font-size: 12.5px;
+      color: #8e9ca8;
       margin-top: 2px;
       margin-bottom: 0;
-      text-align: right;
     }
 
     /* Auth Tabs */
-    .auth-tabs, .auth-mode-tabs {
+    .auth-tabs {
       display: flex;
-      background-color: var(--bg-main);
-      border-radius: 14px;
-      padding: 5px;
-      margin-bottom: 25px;
-      border: 1px solid var(--divider);
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    .auth-tab, .auth-mode-tab {
+    .auth-tab {
       flex: 1;
       text-align: center;
-      padding: 11px;
-      font-size: 14.5px;
-      font-weight: 600;
+      padding: 8px 12px;
+      font-size: 13.5px;
+      font-weight: 700;
       cursor: pointer;
-      border-radius: 10px;
-      color: var(--text-secondary);
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 9px;
+      color: #8e9ca8;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .auth-tab.active, .auth-mode-tab.active {
+    .auth-tab.active {
       background-color: var(--accent);
       color: white;
-      box-shadow: 0 4px 12px rgba(82, 136, 193, 0.35);
+      box-shadow: 0 4px 12px rgba(82, 136, 193, 0.25);
     }
 
     /* Input Fields */
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       position: relative;
     }
 
     .form-group label {
       display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #8e9ca8;
+      margin-bottom: 6px;
       padding-right: 4px;
+      text-align: right;
     }
 
     .input-wrapper {
@@ -198,21 +199,22 @@
 
     .input-wrapper input {
       width: 100%;
-      padding: 12px 42px 12px 16px;
-      background-color: rgba(255, 255, 255, 0.04);
-      border: 1.5px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
+      padding: 11px 42px 11px 16px;
+      background-color: rgba(255, 255, 255, 0.03);
+      border: 1.5px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
       color: white;
-      font-size: 14.5px;
+      font-size: 14px;
       outline: none;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       text-align: right;
+      box-sizing: border-box;
     }
 
     .input-wrapper input:focus {
       border-color: var(--accent);
-      background-color: rgba(255, 255, 255, 0.06);
-      box-shadow: 0 0 0 4px rgba(82, 136, 193, 0.15), 0 8px 24px rgba(0, 0, 0, 0.2);
+      background-color: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 0 4px rgba(82, 136, 193, 0.15), 0 8px 24px rgba(0, 0, 0, 0.25);
     }
 
     .input-icon {
@@ -1493,6 +1495,10 @@
   <!-- 1. Authentication Screen -->
   <!-- ========================================== -->
   <div id="auth-screen">
+    <!-- Dummy elements for backward compatibility with JS classList/selectors -->
+    <div id="mode-tab-login" style="display: none;"></div>
+    <div id="mode-tab-register" style="display: none;"></div>
+
     <div class="auth-card">
       <div class="auth-logo">
         <div class="icon">➤</div>
@@ -1510,14 +1516,8 @@
         <span class="message"></span>
       </div>
 
-      <!-- Auth Mode Selector (Login vs Sign Up) -->
-      <div class="auth-mode-tabs">
-        <div class="auth-mode-tab active" id="mode-tab-login" onclick="switchAuthMode('login')">تسجيل الدخول</div>
-        <div class="auth-mode-tab" id="mode-tab-register" onclick="switchAuthMode('register')">إنشاء حساب</div>
-      </div>
-
       <!-- Auth Tab Buttons (Email vs Phone) -->
-      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; text-align: right; padding-right: 4px;">طريقة التحقق:</div>
+      <div style="font-size: 12px; color: #8e9ca8; margin-bottom: 8px; text-align: right; padding-right: 4px; font-weight: 700;">طريقة التحقق:</div>
       <div class="auth-tabs">
         <div class="auth-tab active" id="tab-email" onclick="switchAuthTab('email')">البريد الإلكتروني</div>
         <div class="auth-tab" id="tab-phone" onclick="switchAuthTab('phone')">رقم الهاتف</div>
@@ -1529,12 +1529,12 @@
         <div class="form-group" id="group-profile-pic" style="display: none; text-align: center;">
           <label style="text-align: center; display: block; margin-bottom: 8px;">الصورة الشخصية (اختياري)</label>
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <div id="auth-profile-pic-preview" style="width: 80px; height: 80px; border-radius: 50%; background-color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; color: white; background-size: cover; background-position: center; position: relative; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="document.getElementById('auth-profile-pic-input').click()">
+            <div id="auth-profile-pic-preview" style="width: 72px; height: 72px; border-radius: 50%; background-color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; color: white; background-size: cover; background-position: center; position: relative; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.25);" onclick="document.getElementById('auth-profile-pic-input').click()">
               <span>👤</span>
-              <div style="position: absolute; bottom: 0; right: 0; background-color: var(--accent); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; border: 2px solid var(--bg-menu);">📷</div>
+              <div style="position: absolute; bottom: 0; right: 0; background-color: var(--accent); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; border: 2px solid #17212b;">📷</div>
             </div>
             <input type="file" id="auth-profile-pic-input" accept="image/*" style="display: none;" onchange="handleAuthProfilePicChange(event)">
-            <span style="font-size: 11px; color: var(--text-secondary);">انقر لاختيار صورة</span>
+            <span style="font-size: 10.5px; color: #8e9ca8;">انقر لاختيار صورة</span>
           </div>
         </div>
 
@@ -1575,29 +1575,32 @@
         </div>
 
         <!-- Forgot Password Link (Login Mode only) -->
-        <div id="forgot-password-link-wrapper" style="text-align: right; margin-top: -8px; margin-bottom: 12px; direction: rtl;">
-          <a href="#" onclick="showRecoveryModal(event)" style="color: var(--accent); font-size: 13px; text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#74a2d6'" onmouseout="this.style.color='var(--accent)'">هل نسيت كلمة المرور؟</a>
+        <div id="forgot-password-link-wrapper" style="text-align: right; margin-top: -6px; margin-bottom: 12px; direction: rtl;">
+          <a href="#" onclick="showRecoveryModal(event)" style="color: var(--accent); font-size: 12.5px; text-decoration: none; font-weight: 700; transition: color 0.2s;" onmouseover="this.style.color='#74a2d6'" onmouseout="this.style.color='var(--accent)'">هل نسيت كلمة المرور؟</a>
         </div>
 
-        <!-- Birthdate (Register Mode Only) -->
-        <div class="form-group" id="group-dob" style="display: none;">
-          <label for="auth-dob">تاريخ الميلاد (اختياري)</label>
-          <div class="input-wrapper">
-            <input type="date" id="auth-dob" style="color-scheme: dark; text-align: right;">
-            <span class="input-icon">📅</span>
+        <!-- Row for Date of Birth & Gender (Register Mode Only) -->
+        <div id="row-dob-gender" style="display: none; gap: 12px; margin-bottom: 15px;">
+          <!-- Birthdate -->
+          <div class="form-group" id="group-dob" style="flex: 1; margin-bottom: 0;">
+            <label for="auth-dob">تاريخ الميلاد (اختياري)</label>
+            <div class="input-wrapper">
+              <input type="date" id="auth-dob" style="color-scheme: dark; text-align: right; font-size: 13px;">
+              <span class="input-icon">📅</span>
+            </div>
           </div>
-        </div>
 
-        <!-- Gender (Register Mode Only) -->
-        <div class="form-group" id="group-gender" style="display: none;">
-          <label for="auth-gender">الجنس (اختياري)</label>
-          <div class="input-wrapper">
-            <select id="auth-gender" style="width:100%; padding: 13px 44px 13px 16px; background-color: var(--bg-main); border: 1px solid var(--divider); border-radius:12px; color:white; outline:none; text-align: right; direction: rtl; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
-              <option value="">اختر الجنس</option>
-              <option value="ذكر">ذكر</option>
-              <option value="أنثى">أنثى</option>
-            </select>
-            <span class="input-icon" style="z-index: 2;">🚻</span>
+          <!-- Gender -->
+          <div class="form-group" id="group-gender" style="flex: 1; margin-bottom: 0;">
+            <label for="auth-gender">الجنس (اختياري)</label>
+            <div class="input-wrapper">
+              <select id="auth-gender" style="width:100%; padding: 11px 16px 11px 40px; background-color: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.07); border-radius:12px; color:white; outline:none; text-align: right; direction: rtl; -webkit-appearance: none; -moz-appearance: none; appearance: none; font-size: 13px; box-sizing: border-box;">
+                <option value="" style="background: #17212b;">اختر</option>
+                <option value="ذكر" style="background: #17212b;">ذكر</option>
+                <option value="أنثى" style="background: #17212b;">أنثى</option>
+              </select>
+              <span class="input-icon" style="z-index: 2;">🚻</span>
+            </div>
           </div>
         </div>
 
@@ -1615,6 +1618,12 @@
           <span id="auth-btn-text">تسجيل الدخول</span>
           <div class="spinner" id="auth-spinner"></div>
         </button>
+
+        <!-- Dynamic Toggle Mode Footer -->
+        <div class="auth-footer" style="text-align: center; margin-top: 20px; font-size: 13px; color: #8e9ca8; direction: rtl; line-height: 1.4;">
+          <span id="auth-footer-text">ليس لديك حساب؟</span> 
+          <a href="#" id="auth-footer-link" onclick="event.preventDefault(); switchAuthMode('register');" style="color: var(--accent); font-weight: 700; text-decoration: none; margin-right: 4px; transition: color 0.2s;">إنشاء حساب جديد</a>
+        </div>
       </form>
     </div>
   </div>
@@ -2064,6 +2073,32 @@
     let activeChatUserId = null;
     let activeChatUserData = null;
     let activeChatId = null;
+
+    window.localPendingMessages = {};
+
+    function addPendingMessage(key, payload) {
+      if (!window.localPendingMessages) {
+        window.localPendingMessages = {};
+      }
+      window.localPendingMessages[key] = {
+        ...payload,
+        pending: true,
+        chatId: activeChatId,
+        id: key
+      };
+      if (typeof window.renderMessagesWithPending === "function") {
+        window.renderMessagesWithPending();
+      }
+    }
+
+    function removePendingMessage(key) {
+      if (window.localPendingMessages) {
+        delete window.localPendingMessages[key];
+      }
+      if (typeof window.renderMessagesWithPending === "function") {
+        window.renderMessagesWithPending();
+      }
+    }
     
     // Cached users and active listeners reference to prevent duplication
     let allUsersCache = {};
@@ -2216,43 +2251,61 @@
       const groupProfilePic = document.getElementById("group-profile-pic");
       const groupDob = document.getElementById("group-dob");
       const groupGender = document.getElementById("group-gender");
+      const rowDobGender = document.getElementById("row-dob-gender");
       const groupBio = document.getElementById("group-bio");
       
       const submitText = document.getElementById("auth-btn-text");
       const authUsernameInput = document.getElementById("auth-username");
+
+      const footerText = document.getElementById("auth-footer-text");
+      const footerLink = document.getElementById("auth-footer-link");
       
       if (mode === "register") {
         isSignupMode = true;
-        tabRegister.classList.add("active");
-        tabLogin.classList.remove("active");
+        if (tabRegister) tabRegister.classList.add("active");
+        if (tabLogin) tabLogin.classList.remove("active");
         
-        groupUsername.style.display = "block";
-        groupProfilePic.style.display = "block";
-        groupDob.style.display = "block";
-        groupGender.style.display = "block";
-        groupBio.style.display = "block";
+        if (groupUsername) groupUsername.style.display = "block";
+        if (groupProfilePic) groupProfilePic.style.display = "block";
+        if (groupDob) groupDob.style.display = "block";
+        if (groupGender) groupGender.style.display = "block";
+        if (rowDobGender) rowDobGender.style.display = "flex";
+        if (groupBio) groupBio.style.display = "block";
         
         const forgotLink = document.getElementById("forgot-password-link-wrapper");
         if (forgotLink) forgotLink.style.display = "none";
 
-        authUsernameInput.setAttribute("required", "true");
-        submitText.textContent = "إنشاء حساب جديد";
+        if (authUsernameInput) authUsernameInput.setAttribute("required", "true");
+        if (submitText) submitText.textContent = "إنشاء حساب جديد";
+
+        if (footerText) footerText.textContent = "لديك حساب بالفعل؟";
+        if (footerLink) {
+          footerLink.textContent = "تسجيل الدخول";
+          footerLink.setAttribute("onclick", "event.preventDefault(); switchAuthMode('login');");
+        }
       } else {
         isSignupMode = false;
-        tabLogin.classList.add("active");
-        tabRegister.classList.remove("active");
+        if (tabLogin) tabLogin.classList.add("active");
+        if (tabRegister) tabRegister.classList.remove("active");
         
-        groupUsername.style.display = "none";
-        groupProfilePic.style.display = "none";
-        groupDob.style.display = "none";
-        groupGender.style.display = "none";
-        groupBio.style.display = "none";
+        if (groupUsername) groupUsername.style.display = "none";
+        if (groupProfilePic) groupProfilePic.style.display = "none";
+        if (groupDob) groupDob.style.display = "none";
+        if (groupGender) groupGender.style.display = "none";
+        if (rowDobGender) rowDobGender.style.display = "none";
+        if (groupBio) groupBio.style.display = "none";
         
         const forgotLink = document.getElementById("forgot-password-link-wrapper");
         if (forgotLink) forgotLink.style.display = "block";
 
-        authUsernameInput.removeAttribute("required");
-        submitText.textContent = "تسجيل الدخول";
+        if (authUsernameInput) authUsernameInput.removeAttribute("required");
+        if (submitText) submitText.textContent = "تسجيل الدخول";
+
+        if (footerText) footerText.textContent = "ليس لديك حساب؟";
+        if (footerLink) {
+          footerLink.textContent = "إنشاء حساب جديد";
+          footerLink.setAttribute("onclick", "event.preventDefault(); switchAuthMode('register');");
+        }
       }
     }
 
@@ -2979,22 +3032,45 @@
       
       let isInitialLoad = true;
       const knownReadMessageKeys = new Set();
-      
-      activeChatListener = onValue(messagesRef, (snapshot) => {
-        msgBox.innerHTML = "";
-        
-        if (snapshot.exists()) {
+      window.lastMessagesSnapshot = null;
+
+      function renderMessages() {
+        const msgBox = document.getElementById("chat-messages-box");
+        if (!msgBox) return;
+
+        const mergedMessages = [];
+        const messageKeys = new Set();
+
+        if (window.lastMessagesSnapshot && window.lastMessagesSnapshot.exists()) {
+          window.lastMessagesSnapshot.forEach((childSnap) => {
+            const key = childSnap.key;
+            const val = childSnap.val();
+            messageKeys.add(key);
+            mergedMessages.push({ key, val, isPending: false });
+          });
+        }
+
+        if (window.localPendingMessages) {
+          Object.entries(window.localPendingMessages).forEach(([key, msg]) => {
+            if (msg.chatId === activeChatId && !messageKeys.has(key)) {
+              mergedMessages.push({ key, val: msg, isPending: true });
+            }
+          });
+        }
+
+        if (mergedMessages.length > 0) {
+          msgBox.innerHTML = "";
           const updates = {};
           let needsUpdate = false;
           let playDelivered = false;
           let unreadDividerInserted = false;
 
-          snapshot.forEach((childSnap) => {
-            const msgKey = childSnap.key;
-            const msg = childSnap.val();
+          mergedMessages.forEach((item) => {
+            const msgKey = item.key;
+            const msg = item.val;
+            const isPending = item.isPending;
             const isSelf = msg.senderId === currentUserId;
-            
-            const isUnreadMessage = !isSelf && msg.read !== true;
+            const isUnreadMessage = !isSelf && msg.read !== true && !isPending;
 
             // Mark as read if received from the other user and not read yet
             if (isUnreadMessage) {
@@ -3021,16 +3097,21 @@
             
             let checkmarks = "";
             if (isSelf) {
-              const isRead = msg.read === true;
-              if (isRead) {
-                if (!isInitialLoad && !knownReadMessageKeys.has(msgKey)) {
-                  playDelivered = true;
+              if (isPending) {
+                // Spinning clock icon
+                checkmarks = `<span class="read-status pending" style="font-size: 11px; margin-right: 4px; color: rgba(255, 255, 255, 0.5); vertical-align: middle; animation: spin 1.5s linear infinite; display: inline-block;">🕒</span>`;
+              } else {
+                const isRead = msg.read === true;
+                if (isRead) {
+                  if (!isInitialLoad && !knownReadMessageKeys.has(msgKey)) {
+                    playDelivered = true;
+                  }
+                  knownReadMessageKeys.add(msgKey);
                 }
-                knownReadMessageKeys.add(msgKey);
+                const checkSymbol = isRead ? "✓✓" : "✓";
+                const colorSymbol = isRead ? "#30d158" : "rgba(255, 255, 255, 0.4)";
+                checkmarks = `<span class="read-status ${isRead ? 'read' : ''}" style="font-size: 11px; margin-right: 4px; color: ${colorSymbol}; font-weight: bold; vertical-align: middle;">${checkSymbol}</span>`;
               }
-              const checkSymbol = isRead ? "✓✓" : "✓";
-              const colorSymbol = isRead ? "#30d158" : "rgba(255, 255, 255, 0.4)";
-              checkmarks = `<span class="read-status ${isRead ? 'read' : ''}" style="font-size: 11px; margin-right: 4px; color: ${colorSymbol}; font-weight: bold; vertical-align: middle;">${checkSymbol}</span>`;
             }
 
             let msgContentHtml = "";
@@ -3099,6 +3180,13 @@
           msgBox.innerHTML = '<div style="text-align:center; padding: 40px; color:var(--text-secondary)">لا توجد رسائل بينكما بعد. أرسل رسالة للبدء! 👋</div>';
           isInitialLoad = false;
         }
+      }
+
+      window.renderMessagesWithPending = renderMessages;
+
+      activeChatListener = onValue(messagesRef, (snapshot) => {
+        window.lastMessagesSnapshot = snapshot;
+        renderMessages();
       });
     }
 
@@ -3119,12 +3207,13 @@
       input.style.height = "24px";
       toggleEmojiPicker(false);
 
+      let newMsgKey = null;
       try {
         // Play the sent sound immediately for snappy UI feel
         playSentSound();
 
         const msgRef = ref(db, `messages/${activeChatId}`);
-        const newMsgKey = push(msgRef).key;
+        newMsgKey = push(msgRef).key;
         
         const timestamp = Date.now();
         const msgPayload = {
@@ -3133,6 +3222,8 @@
           timestamp: timestamp,
           read: false
         };
+
+        addPendingMessage(newMsgKey, msgPayload);
 
         // Write message packet
         await set(ref(db, `messages/${activeChatId}/${newMsgKey}`), msgPayload);
@@ -3150,6 +3241,10 @@
       } catch (err) {
         console.error("Error sending message: ", err);
         alert("فشل إرسال الرسالة. يرجى التحقق من الاتصال بالإنترنت.");
+      } finally {
+        if (newMsgKey) {
+          removePendingMessage(newMsgKey);
+        }
       }
     }
 
@@ -3845,10 +3940,11 @@
     async function sendVoiceMessage(base64Audio) {
       if (!activeChatId) return;
 
+      let newMsgKey = null;
       try {
         playSentSound();
         const msgRef = ref(db, `messages/${activeChatId}`);
-        const newMsgKey = push(msgRef).key;
+        newMsgKey = push(msgRef).key;
         
         const timestamp = Date.now();
         const msgPayload = {
@@ -3858,6 +3954,8 @@
           timestamp: timestamp,
           read: false
         };
+
+        addPendingMessage(newMsgKey, msgPayload);
 
         await set(ref(db, `messages/${activeChatId}/${newMsgKey}`), msgPayload);
 
@@ -3873,6 +3971,10 @@
       } catch (err) {
         console.error("Error sending voice: ", err);
         alert("فشل إرسال الرسالة الصوتية.");
+      } finally {
+        if (newMsgKey) {
+          removePendingMessage(newMsgKey);
+        }
       }
     }
 
@@ -4018,10 +4120,11 @@
       // Close modal
       window.closeImagePreviewModal();
 
+      let newMsgKey = null;
       try {
         playSentSound();
         const msgRef = ref(db, `messages/${activeChatId}`);
-        const newMsgKey = push(msgRef).key;
+        newMsgKey = push(msgRef).key;
         
         const timestamp = Date.now();
         const msgPayload = {
@@ -4031,6 +4134,8 @@
           timestamp: timestamp,
           read: false
         };
+
+        addPendingMessage(newMsgKey, msgPayload);
 
         await set(ref(db, `messages/${activeChatId}/${newMsgKey}`), msgPayload);
 
@@ -4046,6 +4151,10 @@
       } catch (err) {
         console.error("Error sending image: ", err);
         alert("فشل إرسال الصورة.");
+      } finally {
+        if (newMsgKey) {
+          removePendingMessage(newMsgKey);
+        }
       }
     };
 
