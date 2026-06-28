@@ -1534,10 +1534,23 @@
 </head>
 <body>
 
+  <!-- Splash Screen to prevent Login screen flash for already logged-in users -->
+  <div id="splash-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; width: 100%; background-color: var(--bg-main); z-index: 15000; position: fixed; top: 0; left: 0; right: 0; bottom: 0; transition: opacity 0.5s ease;">
+    <div style="font-size: 64px; color: var(--accent); margin-bottom: 24px; animation: pulseLogo 1.6s ease-in-out infinite; transform-origin: center;">➤</div>
+    <h2 style="font-size: 24px; font-weight: 850; color: white; margin: 0 0 8px 0; font-family: var(--font-family);">YH Chat</h2>
+    <p style="font-size: 13.5px; color: var(--text-secondary); margin: 0; font-family: var(--font-family); text-align: center; direction: rtl;">جاري التحقق من حالة الاتصال والتحميل الآمن...</p>
+    <style>
+      @keyframes pulseLogo {
+        0%, 100% { transform: scale(0.9) rotate(-3deg); opacity: 0.7; filter: drop-shadow(0 0 10px rgba(82,136,193,0.3)); }
+        50% { transform: scale(1.1) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 25px rgba(82,136,193,0.7)); }
+      }
+    </style>
+  </div>
+
   <!-- ========================================== -->
   <!-- 1. Authentication Screen -->
   <!-- ========================================== -->
-  <div id="auth-screen">
+  <div id="auth-screen" style="display: none;">
     <!-- Dummy elements for backward compatibility with JS classList/selectors -->
     <div id="mode-tab-login" style="display: none;"></div>
     <div id="mode-tab-register" style="display: none;"></div>
@@ -1557,13 +1570,6 @@
       <div class="alert alert-success" id="auth-alert-success">
         <span class="icon">✓</span>
         <span class="message"></span>
-      </div>
-
-      <!-- Auth Tab Buttons (Email vs Phone) -->
-      <div style="font-size: 12px; color: #8e9ca8; margin-bottom: 8px; text-align: right; padding-right: 4px; font-weight: 700;">طريقة التحقق:</div>
-      <div class="auth-tabs">
-        <div class="auth-tab active" id="tab-email" onclick="switchAuthTab('email')">البريد الإلكتروني</div>
-        <div class="auth-tab" id="tab-phone" onclick="switchAuthTab('phone')">رقم الهاتف</div>
       </div>
 
       <!-- Auth Input Fields form -->
@@ -1594,17 +1600,8 @@
         <div class="form-group" id="group-email">
           <label for="auth-email">البريد الإلكتروني</label>
           <div class="input-wrapper">
-            <input type="email" id="auth-email" placeholder="name@example.com">
+            <input type="email" id="auth-email" placeholder="name@example.com" required>
             <span class="input-icon">✉️</span>
-          </div>
-        </div>
-
-        <!-- Phone Field -->
-        <div class="form-group" id="group-phone" style="display: none;">
-          <label for="auth-phone">رقم الهاتف</label>
-          <div class="input-wrapper">
-            <input type="text" id="auth-phone" placeholder="05xxxxxxxx">
-            <span class="input-icon">📞</span>
           </div>
         </div>
 
@@ -1619,7 +1616,7 @@
 
         <!-- Forgot Password Link (Login Mode only) -->
         <div id="forgot-password-link-wrapper" style="text-align: right; margin-top: -6px; margin-bottom: 12px; direction: rtl;">
-          <a href="#" onclick="showRecoveryModal(event)" style="color: var(--accent); font-size: 12.5px; text-decoration: none; font-weight: 700; transition: color 0.2s;" onmouseover="this.style.color='#74a2d6'" onmouseout="this.style.color='var(--accent)'">هل نسيت كلمة المرور؟</a>
+          <a href="#" onclick="event.preventDefault(); switchAuthMode('recover');" style="color: var(--accent); font-size: 12.5px; text-decoration: none; font-weight: 700; transition: color 0.2s;" onmouseover="this.style.color='#74a2d6'" onmouseout="this.style.color='var(--accent)'">هل نسيت كلمة المرور؟</a>
         </div>
 
         <!-- Row for Date of Birth & Gender (Register Mode Only) -->
@@ -2428,6 +2425,7 @@
     let typingTimeout = null;
     let currentAuthTab = "email"; // "email" or "phone"
     let isSignupMode = false;
+    let isRecoveryMode = false;
     let currentListTab = "chats"; // "chats" or "users"
     let searchQuery = "";
     
@@ -2471,6 +2469,7 @@
     onAuthStateChanged(auth, async (user) => {
       const authScreen = document.getElementById("auth-screen");
       const appContainer = document.getElementById("app-container");
+      const splashScreen = document.getElementById("splash-screen");
       
       if (user) {
         currentUserId = user.uid;
@@ -2521,13 +2520,24 @@
         // Clean database listeners
         cleanupListeners();
         
-        // Clear inputs and display Auth card
-        document.getElementById("auth-form").reset();
-        toggleSignupMode(false);
-        document.getElementById("auth-new-user").checked = false;
+        // Clear inputs and display Auth card safely without crashing on old elements
+        try {
+          document.getElementById("auth-form").reset();
+        } catch (e) {}
+        try {
+          switchAuthMode('login');
+        } catch (e) {}
         
         appContainer.style.display = "none";
         authScreen.style.display = "flex";
+      }
+
+      // Hide/Fade out the splash screen after auth state is determined
+      if (splashScreen) {
+        splashScreen.style.opacity = "0";
+        setTimeout(() => {
+          splashScreen.style.display = "none";
+        }, 500);
       }
     });
 
@@ -2535,30 +2545,8 @@
     // Switch between Auth Tabs (Email vs Phone)
     // ==========================================
     function switchAuthTab(type) {
-      currentAuthTab = type;
-      
-      const tabEmail = document.getElementById("tab-email");
-      const tabPhone = document.getElementById("tab-phone");
-      const groupEmail = document.getElementById("group-email");
-      const groupPhone = document.getElementById("group-phone");
-      
-      hideAuthAlert();
-
-      if (type === "email") {
-        tabEmail.classList.add("active");
-        tabPhone.classList.remove("active");
-        groupEmail.style.display = "block";
-        groupPhone.style.display = "none";
-        document.getElementById("auth-email").setAttribute("required", "true");
-        document.getElementById("auth-phone").removeAttribute("required");
-      } else {
-        tabPhone.classList.add("active");
-        tabEmail.classList.remove("active");
-        groupPhone.style.display = "block";
-        groupEmail.style.display = "none";
-        document.getElementById("auth-phone").setAttribute("required", "true");
-        document.getElementById("auth-email").removeAttribute("required");
-      }
+      // Stub: Phone tabs are removed, so we only use Email
+      currentAuthTab = "email";
     }
 
     // ==========================================
@@ -2574,15 +2562,22 @@
       const groupGender = document.getElementById("group-gender");
       const rowDobGender = document.getElementById("row-dob-gender");
       const groupBio = document.getElementById("group-bio");
+      const groupEmail = document.getElementById("group-email");
+      const groupPassword = document.getElementById("group-password");
       
       const submitText = document.getElementById("auth-btn-text");
       const authUsernameInput = document.getElementById("auth-username");
+      const authPasswordInput = document.getElementById("auth-password");
 
       const footerText = document.getElementById("auth-footer-text");
       const footerLink = document.getElementById("auth-footer-link");
+      const forgotLink = document.getElementById("forgot-password-link-wrapper");
       
+      hideAuthAlert();
+
       if (mode === "register") {
         isSignupMode = true;
+        isRecoveryMode = false;
         if (tabRegister) tabRegister.classList.add("active");
         if (tabLogin) tabLogin.classList.remove("active");
         
@@ -2592,11 +2587,13 @@
         if (groupGender) groupGender.style.display = "block";
         if (rowDobGender) rowDobGender.style.display = "flex";
         if (groupBio) groupBio.style.display = "block";
+        if (groupEmail) groupEmail.style.display = "block";
+        if (groupPassword) groupPassword.style.display = "block";
         
-        const forgotLink = document.getElementById("forgot-password-link-wrapper");
         if (forgotLink) forgotLink.style.display = "none";
 
         if (authUsernameInput) authUsernameInput.setAttribute("required", "true");
+        if (authPasswordInput) authPasswordInput.setAttribute("required", "true");
         if (submitText) submitText.textContent = "إنشاء حساب جديد";
 
         if (footerText) footerText.textContent = "لديك حساب بالفعل؟";
@@ -2604,8 +2601,33 @@
           footerLink.textContent = "تسجيل الدخول";
           footerLink.setAttribute("onclick", "event.preventDefault(); switchAuthMode('login');");
         }
+      } else if (mode === "recover") {
+        isSignupMode = false;
+        isRecoveryMode = true;
+
+        if (groupUsername) groupUsername.style.display = "none";
+        if (groupProfilePic) groupProfilePic.style.display = "none";
+        if (groupDob) groupDob.style.display = "none";
+        if (groupGender) groupGender.style.display = "none";
+        if (rowDobGender) rowDobGender.style.display = "none";
+        if (groupBio) groupBio.style.display = "none";
+        if (groupEmail) groupEmail.style.display = "block";
+        if (groupPassword) groupPassword.style.display = "none";
+        
+        if (forgotLink) forgotLink.style.display = "none";
+
+        if (authUsernameInput) authUsernameInput.removeAttribute("required");
+        if (authPasswordInput) authPasswordInput.removeAttribute("required");
+        if (submitText) submitText.textContent = "إرسال رابط استعادة الحساب";
+
+        if (footerText) footerText.textContent = "تذكرت كلمة المرور؟";
+        if (footerLink) {
+          footerLink.textContent = "العودة لتسجيل الدخول";
+          footerLink.setAttribute("onclick", "event.preventDefault(); switchAuthMode('login');");
+        }
       } else {
         isSignupMode = false;
+        isRecoveryMode = false;
         if (tabLogin) tabLogin.classList.add("active");
         if (tabRegister) tabRegister.classList.remove("active");
         
@@ -2615,11 +2637,13 @@
         if (groupGender) groupGender.style.display = "none";
         if (rowDobGender) rowDobGender.style.display = "none";
         if (groupBio) groupBio.style.display = "none";
+        if (groupEmail) groupEmail.style.display = "block";
+        if (groupPassword) groupPassword.style.display = "block";
         
-        const forgotLink = document.getElementById("forgot-password-link-wrapper");
         if (forgotLink) forgotLink.style.display = "block";
 
         if (authUsernameInput) authUsernameInput.removeAttribute("required");
+        if (authPasswordInput) authPasswordInput.setAttribute("required", "true");
         if (submitText) submitText.textContent = "تسجيل الدخول";
 
         if (footerText) footerText.textContent = "ليس لديك حساب؟";
@@ -2701,106 +2725,49 @@
       hideAuthAlert();
 
       const emailVal = document.getElementById("auth-email").value.trim();
-      let phoneVal = document.getElementById("auth-phone").value.trim();
-      if (currentAuthTab === "phone") {
-        phoneVal = phoneVal.replace(/\D/g, ""); // Strip all non-digit characters (+, spaces, dashes)
-      }
-      const passwordVal = document.getElementById("auth-password").value;
+      const passwordVal = document.getElementById("auth-password") ? document.getElementById("auth-password").value : "";
       const usernameVal = document.getElementById("auth-username").value.trim() || "مستعمل";
 
       try {
-        if (currentAuthTab === "email") {
+        if (isRecoveryMode) {
           // ------------------------------------
-          // Email & Password Workflow
+          // Native Password Recovery Workflow
           // ------------------------------------
-          if (isSignupMode) {
-            // Sign Up using Email
-            const userCredential = await createUserWithEmailAndPassword(auth, emailVal, passwordVal);
-            const user = userCredential.user;
-            
-            const dobVal = document.getElementById("auth-dob").value || "";
-            const genderVal = document.getElementById("auth-gender").value || "";
-            const bioVal = document.getElementById("auth-bio").value.trim() || "";
-
-            // Write user info to Realtime DB
-            const newUserData = {
-              email: emailVal,
-              phone: "",
-              username: usernameVal,
-              avatar: getRandomAvatarColor(),
-              profilePic: authProfilePicBase64 || "",
-              dob: dobVal,
-              gender: genderVal,
-              bio: bioVal
-            };
-            
-            await set(ref(db, `users/${user.uid}`), newUserData);
-            showAuthAlert("تم إنشاء الحساب بالبريد بنجاح! جاري الدخول...", "success");
-          } else {
-            // Log In using Email
-            await signInWithEmailAndPassword(auth, emailVal, passwordVal);
+          if (!emailVal) {
+            throw new Error("يرجى إدخال البريد الإلكتروني أولاً.");
           }
+          await sendPasswordResetEmail(auth, emailVal);
+          showAuthAlert("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني بنجاح! يرجى مراجعة بريدك الوارد.", "success");
+        } else if (isSignupMode) {
+          // ------------------------------------
+          // Email & Password Sign Up Workflow
+          // ------------------------------------
+          const userCredential = await createUserWithEmailAndPassword(auth, emailVal, passwordVal);
+          const user = userCredential.user;
+          
+          const dobVal = document.getElementById("auth-dob").value || "";
+          const genderVal = document.getElementById("auth-gender").value || "";
+          const bioVal = document.getElementById("auth-bio").value.trim() || "";
+
+          // Write user info to Realtime DB
+          const newUserData = {
+            email: emailVal,
+            phone: "",
+            username: usernameVal,
+            avatar: getRandomAvatarColor(),
+            profilePic: authProfilePicBase64 || "",
+            dob: dobVal,
+            gender: genderVal,
+            bio: bioVal
+          };
+          
+          await set(ref(db, `users/${user.uid}`), newUserData);
+          showAuthAlert("تم إنشاء الحساب بالبريد بنجاح! جاري الدخول...", "success");
         } else {
           // ------------------------------------
-          // Custom Phone & Password Workflow
+          // Email & Password Log In Workflow
           // ------------------------------------
-          if (!phoneVal) {
-            throw new Error("يرجى إدخال رقم الهاتف أولاً.");
-          }
-
-          if (isSignupMode) {
-            // Validation check: ensure digits are entered
-            if (!/^\d{8,15}$/.test(phoneVal)) {
-              throw new Error("رقم الهاتف يجب أن يحتوي على أرقام فقط (بين 8 إلى 15 رقماً).");
-            }
-
-            // Check if phone already exists in the phone registry mapping
-            const phoneSnapshot = await get(ref(db, `phones/${phoneVal}`));
-            if (phoneSnapshot.exists()) {
-              throw new Error("رقم الهاتف هذا مسجل بالفعل لـ مستخدم آخر!");
-            }
-
-            // Phone is unique, register virtual email standard user
-            const virtualEmail = `phone_${phoneVal}@yhchat.com`;
-            const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, passwordVal);
-            const user = userCredential.user;
-
-            const dobVal = document.getElementById("auth-dob").value || "";
-            const genderVal = document.getElementById("auth-gender").value || "";
-            const bioVal = document.getElementById("auth-bio").value.trim() || "";
-
-            // Write profiles and register mapping in db
-            const newUserData = {
-              email: "",
-              phone: phoneVal,
-              username: usernameVal,
-              avatar: getRandomAvatarColor(),
-              profilePic: authProfilePicBase64 || "",
-              dob: dobVal,
-              gender: genderVal,
-              bio: bioVal
-            };
-
-            await set(ref(db, `users/${user.uid}`), newUserData);
-            await set(ref(db, `phones/${phoneVal}`), user.uid);
-            
-            showAuthAlert("تم تسجيل حسابك بالهاتف بنجاح! جاري الدخول...", "success");
-          } else {
-            // Validation check during login as well
-            if (!/^\d{8,15}$/.test(phoneVal)) {
-              throw new Error("رقم الهاتف غير صالح. يجب أن يتكون من 8 إلى 15 رقماً.");
-            }
-
-            // Log In using Phone
-            const phoneSnapshot = await get(ref(db, `phones/${phoneVal}`));
-            if (!phoneSnapshot.exists()) {
-              throw new Error("رقم الهاتف هذا غير مسجل لدينا! يرجى التحقق أو إنشاء حساب جديد.");
-            }
-
-            const mappedUid = phoneSnapshot.val();
-            const virtualEmail = `phone_${phoneVal}@yhchat.com`;
-            await signInWithEmailAndPassword(auth, virtualEmail, passwordVal);
-          }
+          await signInWithEmailAndPassword(auth, emailVal, passwordVal);
         }
       } catch (err) {
         console.error("Auth Failure: ", err);
