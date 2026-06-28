@@ -3055,6 +3055,20 @@
     // ==========================================
     // Fetch and Sync all users
     // ==========================================
+    window.isUsersLoaded = false;
+
+    function highlightText(text, query) {
+      if (!text) return "";
+      if (!query) return escapeHtml(text);
+      const index = text.toLowerCase().indexOf(query.toLowerCase());
+      if (index === -1) return escapeHtml(text);
+      
+      const originalMatch = text.substr(index, query.length);
+      const before = text.substr(0, index);
+      const after = text.substr(index + query.length);
+      return escapeHtml(before) + `<mark style="background-color: rgba(48, 209, 88, 0.35); color: #fff; padding: 1px 3px; border-radius: 4px;">` + escapeHtml(originalMatch) + `</mark>` + escapeHtml(after);
+    }
+
     function fetchAllUsers() {
       const usersRef = ref(db, 'users/');
       onValue(usersRef, (snapshot) => {
@@ -3066,34 +3080,68 @@
             allUsersCache[uid] = data;
           });
         }
+        window.isUsersLoaded = true;
         renderUsersList();
         renderChatsListHTML();
         updateActiveChatHeaderStatus();
       });
     }
 
-    // Render Users Explorer (excluding current logged-in user)
+    // Render Users Explorer (excluding current logged-in user and deleted accounts)
     function renderUsersList() {
       const usersListDiv = document.getElementById("users-list-items");
       usersListDiv.innerHTML = "";
       
       let count = 0;
+      let usersToRender = [];
+
       Object.keys(allUsersCache).forEach((uid) => {
         if (uid === currentUserId) return; // skip self
         
         const user = allUsersCache[uid];
+        if (!user || !user.username || user.deleted === true) return; // skip deleted / invalid accounts
         
+        let score = 0;
+        let isMatch = true;
+
         // Apply search query filter if exists
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
-          const uMatch = user.username && user.username.toLowerCase().includes(q);
-          const eMatch = user.email && user.email.toLowerCase().includes(q);
-          const pMatch = user.phone && user.phone.toLowerCase().includes(q);
+          const usernameLower = (user.username || "").toLowerCase();
+          const emailLower = (user.email || "").toLowerCase();
+          const phoneLower = (user.phone || "").toLowerCase();
+
+          const uMatch = usernameLower.includes(q);
+          const eMatch = emailLower.includes(q);
+          const pMatch = phoneLower.includes(q);
+
           if (!uMatch && !eMatch && !pMatch) {
-            return;
+            isMatch = false;
+          } else {
+            // Calculate search relevance score
+            if (usernameLower === q) {
+              score = 4; // exact match
+            } else if (usernameLower.startsWith(q)) {
+              score = 3; // prefix match
+            } else if (uMatch) {
+              score = 2; // contains match
+            } else {
+              score = 1; // email or phone match
+            }
           }
         }
 
+        if (isMatch) {
+          usersToRender.push({ uid, user, score });
+        }
+      });
+
+      // Sort search results by priority score
+      if (searchQuery) {
+        usersToRender.sort((a, b) => b.score - a.score);
+      }
+
+      usersToRender.forEach(({ uid, user }) => {
         count++;
         const item = document.createElement("div");
         item.className = "list-item";
@@ -3110,14 +3158,20 @@
           avatarStyle = `background-image: url(${user.profilePic}); background-size: cover; background-position: center; position: relative; background-color: transparent;`;
           avatarContent = "";
         }
+
+        const highlightedName = highlightText(user.username, searchQuery);
+        const highlightedPhone = user.phone ? highlightText(user.phone, searchQuery) : "";
+        const highlightedEmail = user.email ? highlightText(user.email, searchQuery) : "";
+        
+        const subtextHtml = user.phone ? '📞 ' + highlightedPhone : '✉️ ' + (highlightedEmail || 'حساب تيليجرام');
         
         item.innerHTML = `
           <div class="avatar" style="${avatarStyle}">${avatarContent}${onlineDotHtml}</div>
           <div class="item-details">
             <div class="item-header">
-              <span class="item-name">${user.username}</span>
+              <span class="item-name">${highlightedName}</span>
             </div>
-            <div class="item-subtext">${user.phone ? '📞 ' + user.phone : '✉️ ' + (user.email || 'حساب تيليجرام')}</div>
+            <div class="item-subtext">${subtextHtml}</div>
           </div>
         `;
         usersListDiv.appendChild(item);
@@ -3193,7 +3247,17 @@
       let count = 0;
       chatsCachedData.forEach((chat) => {
         const otherUser = allUsersCache[chat.otherUserId];
-        if (!otherUser) return; // wait till user profile loaded in cache
+        if (!otherUser) {
+          // If we completed loading user records and they don't exist, they deleted their account.
+          if (window.isUsersLoaded) {
+            return; // Hide chats with deleted accounts entirely
+          }
+          return; // Wait till profiles load
+        }
+
+        if (otherUser.deleted === true) {
+          return; // Skip if explicitly deleted
+        }
         
         // Apply search query filter
         if (searchQuery) {
@@ -3234,16 +3298,19 @@
         const isOnline = otherUser.online === true;
         const onlineDotHtml = isOnline ? `<div class="online-indicator" title="متصل"></div>` : "";
 
+        const highlightedName = highlightText(otherUser.username, searchQuery);
+        const highlightedLastMessage = chat.lastMessage ? highlightText(chat.lastMessage, searchQuery) : "بدء المحادثة...";
+
         item.innerHTML = `
           <div class="avatar" style="${avatarStyle}">${avatarContent}${onlineDotHtml}</div>
           <div class="item-details">
             <div class="item-header">
-              <span class="item-name" style="${isUnread ? 'font-weight: 700; color: #fff;' : ''}">${otherUser.username}</span>
+              <span class="item-name" style="${isUnread ? 'font-weight: 700; color: #fff;' : ''}">${highlightedName}</span>
               <span class="item-time" style="${isUnread ? 'color: #30d158; font-weight: bold;' : ''}">${msgTimeStr}</span>
             </div>
             <div class="item-subtext" style="display: flex; align-items: center; justify-content: flex-start; ${isUnread ? 'font-weight: 600; color: var(--text-primary);' : ''}">
               ${listCheckmarks}
-              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${chat.lastMessage || "بدء المحادثة..."}</span>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${highlightedLastMessage}</span>
               ${isUnread ? `<span class="unread-badge-text" style="background-color: #30d158; color: white; border-radius: 10px; padding: 2px 7px; font-size: 10px; font-weight: bold; margin-right: 6px; margin-left: 2px; white-space: nowrap; box-shadow: 0 1px 4px rgba(48,209,88,0.4);">جديدة</span>` : ''}
             </div>
           </div>
@@ -3287,7 +3354,13 @@
       activeChatUserId = userId;
       activeChatUserData = allUsersCache[userId];
       
-      if (!activeChatUserData) return;
+      if (!activeChatUserData) {
+        if (window.isUsersLoaded) {
+          alert("عذراً، هذا الحساب تم حذفه.");
+          return;
+        }
+        return;
+      }
 
       // Create deterministic chatId: alphabetically sorted uids joined with underscores
       activeChatId = [currentUserId, userId].sort().join("_");
