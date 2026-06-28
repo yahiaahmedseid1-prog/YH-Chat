@@ -21,7 +21,6 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-          cache: 'gradle'
 
       - name: Make Gradlew Executable
         run: chmod +x gradlew
@@ -34,10 +33,13 @@ jobs:
             touch .env
           fi
 
-      - name: Build Debug APK with Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          arguments: :app:assembleDebug
+          gradle-home-cache-cleanup: true
+
+      - name: Build Debug APK with Gradle Wrapper
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
@@ -45,3 +47,4 @@ jobs:
           name: YH-Chat-Debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
+
