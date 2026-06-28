@@ -1020,7 +1020,7 @@
       color: white;
       font-size: 14.5px;
       resize: none;
-      max-height: 80px;
+      max-height: 150px;
       min-height: 24px;
       height: 24px;
       padding: 3px 8px;
@@ -1764,7 +1764,7 @@
             </div>
 
             <!-- Send button -->
-            <button class="send-btn" id="send-msg-btn" onclick="sendMessage()" title="إرسال">➤</button>
+            <button class="send-btn" id="send-msg-btn" onmousedown="event.preventDefault();" onclick="sendMessage()" title="إرسال">➤</button>
 
             <!-- Emoji Picker Popup -->
             <div class="emoji-picker-container" id="emoji-picker">
@@ -3308,7 +3308,7 @@
               navigator.vibrate(50);
             }
             confirmDeleteConversation(chat.otherUserId);
-          }, 2000); // 2000 ms = 2 seconds
+          }, 1000); // 1000 ms = 1 second
         };
 
         const endPress = (e) => {
@@ -3689,6 +3689,12 @@
       input.value = "";
       input.style.height = "24px";
       toggleEmojiPicker(false);
+      
+      // Retain focus on the input field and scroll to latest messages
+      setTimeout(() => {
+        input.focus();
+        scrollMessagesToBottom();
+      }, 20);
 
       // 1. If EDITING mode is active
       if (window.editingMessageId) {
@@ -3790,7 +3796,22 @@
 
     function handleInput() {
       const input = document.getElementById("chat-message-input");
-      if (!input || !activeChatId || !currentUserId) return;
+      if (!input) return;
+
+      // Reset height to default single line height to accurately measure scrollHeight
+      input.style.height = "24px";
+      const scrollHeight = input.scrollHeight;
+      // Expand dynamically up to max 150px
+      if (scrollHeight > 30) {
+        input.style.height = Math.min(scrollHeight, 150) + "px";
+      } else {
+        input.style.height = "24px";
+      }
+
+      // Ensure last message is kept right above the input field
+      scrollMessagesToBottom();
+
+      if (!activeChatId || !currentUserId) return;
 
       const val = input.value;
       if (val === "") {
@@ -3955,6 +3976,14 @@
         }
       });
     }
+
+    function scrollMessagesToBottom() {
+      const msgBox = document.getElementById("chat-messages-box");
+      if (msgBox) {
+        msgBox.scrollTop = msgBox.scrollHeight;
+      }
+    }
+    window.scrollMessagesToBottom = scrollMessagesToBottom;
 
     function getInitials(name) {
       if (!name) return "?";
@@ -4749,6 +4778,22 @@
     // Boot initialize recording triggers
     document.addEventListener("DOMContentLoaded", () => {
       initVoiceRecorder();
+
+      // Keep chat box scrolled to the bottom on input focus / window resize
+      const input = document.getElementById("chat-message-input");
+      if (input) {
+        input.addEventListener("focus", () => {
+          setTimeout(scrollMessagesToBottom, 50);
+          setTimeout(scrollMessagesToBottom, 150);
+          setTimeout(scrollMessagesToBottom, 300);
+        });
+      }
+
+      window.addEventListener("resize", () => {
+        if (activeChatId) {
+          scrollMessagesToBottom();
+        }
+      });
     });
   </script>
 </body>
