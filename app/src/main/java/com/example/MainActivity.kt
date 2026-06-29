@@ -27,7 +27,8 @@ class MainActivity : ComponentActivity() {
       requestPermissions(
         arrayOf(
           android.Manifest.permission.RECORD_AUDIO,
-          android.Manifest.permission.MODIFY_AUDIO_SETTINGS
+          android.Manifest.permission.MODIFY_AUDIO_SETTINGS,
+          android.Manifest.permission.CAMERA
         ),
         101
       )

@@ -1530,6 +1530,242 @@
     .context-menu-card button:hover {
       background: rgba(255, 255, 255, 0.04) !important;
     }
+
+    /* ========================================== */
+    /* Call Overlay & Call UI Styles              */
+    /* ========================================== */
+    .call-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(11, 20, 27, 0.96);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 40px 24px 60px 24px;
+      color: white;
+      direction: rtl;
+    }
+    
+    .call-header-info {
+      text-align: center;
+      margin-top: 40px;
+    }
+    
+    .call-type-badge {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 15px;
+      letter-spacing: 0.5px;
+    }
+    
+    .call-user-name {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    
+    .call-status-text {
+      font-size: 16px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    .call-avatar-outer {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .call-avatar-pulse {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(82, 136, 193, 0.15);
+      animation: callPulse 2s infinite ease-out;
+      z-index: 1;
+    }
+    
+    .call-avatar-pulse-2 {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(82, 136, 193, 0.08);
+      animation: callPulse 2s infinite ease-out;
+      animation-delay: 1s;
+      z-index: 1;
+    }
+    
+    @keyframes callPulse {
+      0% {
+        transform: scale(0.9) rotate(0deg);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(1.6) rotate(0deg);
+        opacity: 0;
+      }
+    }
+    
+    .call-avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      font-size: 48px;
+      font-weight: bold;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      background: var(--accent);
+    }
+    
+    .call-timer {
+      font-size: 20px;
+      font-weight: 600;
+      font-family: monospace;
+      margin-top: 15px;
+      color: #30d158;
+      letter-spacing: 1px;
+    }
+    
+    .call-video-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      overflow: hidden;
+      display: none;
+    }
+    
+    .call-video-remote {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .call-video-local {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: 100px;
+      height: 150px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      z-index: 10;
+      background: #111;
+      transform: scaleX(-1); /* mirror self view */
+    }
+    
+    .call-actions-panel {
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      width: 100%;
+    }
+    
+    .call-buttons-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    
+    .call-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      color: white;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .call-btn-mute {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .call-btn-mute.active {
+      background: #ff9500;
+    }
+    
+    .call-btn-camera {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .call-btn-camera.active {
+      background: #5288c1;
+    }
+    
+    .call-btn-speaker {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .call-btn-speaker.active {
+      background: #34c759;
+    }
+    
+    .call-btn-hangup {
+      background: #ec3d3d;
+      width: 64px;
+      height: 64px;
+      font-size: 26px;
+    }
+    .call-btn-hangup:hover {
+      background: #ff4545;
+      transform: scale(1.05);
+    }
+    
+    .call-btn-accept {
+      background: #30d158;
+      width: 64px;
+      height: 64px;
+      font-size: 26px;
+      animation: acceptPulse 1.5s infinite;
+    }
+    .call-btn-accept:hover {
+      background: #34c759;
+      transform: scale(1.05);
+    }
+    
+    @keyframes acceptPulse {
+      0% { box-shadow: 0 0 0 0 rgba(48,209,88,0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(48,209,88,0); }
+      100% { box-shadow: 0 0 0 0 rgba(48,209,88,0); }
+    }
+    
+    .call-btn:hover:not(.call-btn-hangup):not(.call-btn-accept) {
+      background: rgba(255, 255, 255, 0.22);
+      transform: translateY(-2px);
+    }
   </style>
 </head>
 <body>
@@ -1741,6 +1977,8 @@
               <div class="chat-user-status" id="active-chat-status">متصل</div>
             </div>
             <div class="chat-actions">
+              <button class="chat-action-btn" onclick="startCall('voice')" title="اتصال صوتي" style="font-size: 16px;">📞</button>
+              <button class="chat-action-btn" onclick="startCall('video')" title="اتصال فيديو" style="font-size: 16px;">📹</button>
               <button class="chat-action-btn" onclick="toggleRightPanel(true)" title="معلومات المحادثة">ℹ️</button>
             </div>
           </div>
@@ -1896,7 +2134,7 @@
               <span class="icon">👥</span>
               <span>المجموعات</span>
             </div>
-            <div class="drawer-menu-item" onclick="alert('ميزة المكالمات ستتوفر قريباً في التحديث القادم!')">
+            <div class="drawer-menu-item" onclick="openCallsHistoryModal()">
               <span class="icon">📞</span>
               <span>المكالمات</span>
             </div>
@@ -1905,6 +2143,69 @@
               <span class="icon">🚪</span>
               <span>تسجيل الخروج</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ==================== -->
+      <!-- Call History Modal -->
+      <!-- ==================== -->
+      <div class="modal-overlay" id="calls-history-modal" style="display: none;">
+        <div class="modal-card" style="max-width: 480px; width: 90%; background: var(--bg-menu);">
+          <div class="modal-header">
+            <h3>سجل المكالمات</h3>
+            <button class="btn-close-modal" onclick="closeCallsHistoryModal()">×</button>
+          </div>
+          <div class="modal-body" style="max-height: 60vh; overflow-y: auto; padding: 16px 20px;">
+            <div id="calls-history-list" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Call logs rendered dynamically -->
+              <div style="text-align: center; padding: 30px; color: var(--text-secondary); font-size: 14px;">لا توجد مكالمات سابقة.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ==================== -->
+      <!-- Call Overlay Panel   -->
+      <!-- ==================== -->
+      <div class="call-overlay" id="call-overlay" style="display: none;">
+        <!-- Video Streams (shown during video call) -->
+        <div class="call-video-wrapper" id="call-video-wrapper">
+          <video class="call-video-remote" id="call-video-remote" autoplay playsinline></video>
+          <video class="call-video-local" id="call-video-local" autoplay playsinline muted></video>
+        </div>
+
+        <!-- Call Info Panel -->
+        <div class="call-header-info">
+          <div class="call-type-badge" id="call-type-badge">اتصال صوتي</div>
+          <h2 class="call-user-name" id="call-user-name">اسم المستخدم</h2>
+          <div class="call-status-text" id="call-status-text">يرن الآن...</div>
+          <div class="call-timer" id="call-timer" style="display: none;">00:00</div>
+        </div>
+
+        <!-- Pulsing Avatar Center -->
+        <div class="call-avatar-outer" id="call-avatar-outer">
+          <div class="call-avatar-pulse"></div>
+          <div class="call-avatar-pulse-2"></div>
+          <div class="call-avatar" id="call-avatar">A</div>
+        </div>
+
+        <!-- Call Control Actions -->
+        <div class="call-actions-panel">
+          <!-- Buttons for active connected call or outgoing call -->
+          <div class="call-buttons-row" id="active-call-buttons">
+            <button class="call-btn call-btn-mute" id="call-btn-mute" onclick="toggleCallMute()" title="كتم الصوت">🎙️</button>
+            <button class="call-btn call-btn-camera" id="call-btn-camera" onclick="toggleCallCamera()" style="display: none;" title="الكاميرا">📹</button>
+            <button class="call-btn call-btn-speaker" id="call-btn-speaker" onclick="toggleCallSpeaker()" title="مكبر الصوت">🔊</button>
+            <button class="call-btn call-btn-hangup" onclick="hangUpCall()" title="إنهاء المكالمة">🔴</button>
+          </div>
+
+          <!-- Buttons for incoming call request -->
+          <div class="call-buttons-row" id="incoming-call-buttons" style="display: none;">
+            <button class="call-btn call-btn-accept" onclick="acceptCall()" title="قبول المكالمة">🟢</button>
+            <button class="call-btn call-btn-hangup" onclick="rejectCall()" title="رفض المكالمة">🔴</button>
           </div>
         </div>
       </div>
@@ -2549,6 +2850,7 @@
           startChatRequestsListener();
           fetchAllUsers();
           startPresenceSystem();
+          startGlobalCallsListener();
           
         } catch (error) {
           console.error("Error loading user info: ", error);
@@ -4626,6 +4928,10 @@
         chatRequestsListListener();
         chatRequestsListListener = null;
       }
+      if (callGlobalListener) {
+        callGlobalListener();
+        callGlobalListener = null;
+      }
       if (connectedListener) {
         connectedListener();
         connectedListener = null;
@@ -5525,6 +5831,561 @@
     window.closeImageViewerModal = function() {
       document.getElementById("image-viewer-modal").style.display = "none";
     };
+
+    // ==========================================
+    // Interactive Calling & Real-Time Audio/Video System
+    // ==========================================
+    let currentActiveCall = null;
+    let callTimerInterval = null;
+    let callDurationSeconds = 0;
+    let ringbackInterval = null;
+    let localMediaStream = null;
+    let isCallMuted = false;
+    let isCallCameraOff = false;
+    let isCallSpeakerOn = false;
+    let callGlobalListener = null;
+    let callRingingTimeout = null;
+
+    // Web Audio API Ringtone / Dial-tone Synthesizers
+    let ringOsc1 = null;
+    let ringOsc2 = null;
+    let ringGain = null;
+
+    function startRingingSound() {
+      try {
+        const ctx = getAudioContext();
+        if (ringOsc1) return; // already ringing
+        
+        const playRingCycle = () => {
+          if (!currentActiveCall || currentActiveCall.status !== 'ringing') {
+            stopRingingSound();
+            return;
+          }
+          try {
+            ringOsc1 = ctx.createOscillator();
+            ringOsc2 = ctx.createOscillator();
+            ringGain = ctx.createGain();
+            
+            ringOsc1.type = "sine";
+            ringOsc1.frequency.setValueAtTime(440, ctx.currentTime);
+            ringOsc2.type = "sine";
+            ringOsc2.frequency.setValueAtTime(480, ctx.currentTime);
+            
+            ringGain.gain.setValueAtTime(0.04, ctx.currentTime);
+            
+            ringOsc1.connect(ringGain);
+            ringOsc2.connect(ringGain);
+            ringGain.connect(ctx.destination);
+            
+            ringOsc1.start();
+            ringOsc2.start();
+            
+            // stop after 1.5 seconds of play
+            setTimeout(() => {
+              stopRingingOscillators();
+            }, 1500);
+          } catch(e) {}
+        };
+        
+        playRingCycle();
+        ringbackInterval = setInterval(playRingCycle, 4000);
+      } catch(e) {
+        console.error("Dial-tone error: ", e);
+      }
+    }
+    
+    function stopRingingOscillators() {
+      try {
+        if (ringOsc1) {
+          ringOsc1.stop();
+          ringOsc1 = null;
+        }
+        if (ringOsc2) {
+          ringOsc2.stop();
+          ringOsc2 = null;
+        }
+        if (ringGain) {
+          ringGain.disconnect();
+          ringGain = null;
+        }
+      } catch(e){}
+    }
+    
+    function stopRingingSound() {
+      if (ringbackInterval) {
+        clearInterval(ringbackInterval);
+        ringbackInterval = null;
+      }
+      stopRingingOscillators();
+    }
+
+    let incomingToneInterval = null;
+    function startIncomingRingtone() {
+      try {
+        const ctx = getAudioContext();
+        let step = 0;
+        const melody = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        
+        const playTone = () => {
+          if (!currentActiveCall || currentActiveCall.status !== 'ringing') {
+            stopIncomingRingtone();
+            return;
+          }
+          try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.type = "triangle";
+            const freq = melody[step % melody.length];
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            
+            gain.gain.setValueAtTime(0.05, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.start();
+            osc.stop(ctx.currentTime + 0.4);
+            
+            step++;
+          } catch(e) {}
+        };
+        
+        playTone();
+        incomingToneInterval = setInterval(playTone, 400);
+      } catch(e) {}
+    }
+    
+    function stopIncomingRingtone() {
+      if (incomingToneInterval) {
+        clearInterval(incomingToneInterval);
+        incomingToneInterval = null;
+      }
+    }
+
+    // Main Calling Core
+    async function startCall(type = 'voice') {
+      if (currentActiveCall) return;
+      if (!activeChatId || !activeChatUserId) {
+        alert("يرجى اختيار محادثة أولاً لبدء مكالمة.");
+        return;
+      }
+
+      // Check if user is blocked or has unaccepted chat requests
+      const otherUser = allUsersCache[activeChatUserId];
+      if (!otherUser) return;
+
+      try {
+        const callData = {
+          id: activeChatId,
+          callerId: currentUserId,
+          receiverId: activeChatUserId,
+          type: type,
+          status: "ringing",
+          timestamp: Date.now()
+        };
+
+        currentActiveCall = callData;
+        
+        // Show Call Overlay
+        document.getElementById("call-overlay").style.display = "flex";
+        document.getElementById("call-type-badge").textContent = type === 'video' ? "اتصال فيديو" : "اتصال صوتي";
+        document.getElementById("call-user-name").textContent = otherUser.username;
+        document.getElementById("call-status-text").textContent = "يرن الآن...";
+        document.getElementById("call-timer").style.display = "none";
+        
+        // Render large Call Avatar
+        const avatarEl = document.getElementById("call-avatar");
+        setAvatar(avatarEl, otherUser);
+        
+        // Toggle specific call buttons
+        document.getElementById("active-call-buttons").style.display = "flex";
+        document.getElementById("incoming-call-buttons").style.display = "none";
+
+        isCallMuted = false;
+        isCallCameraOff = false;
+        isCallSpeakerOn = false;
+        document.getElementById("call-btn-mute").classList.remove("active");
+        document.getElementById("call-btn-speaker").classList.remove("active");
+        
+        if (type === 'video') {
+          document.getElementById("call-video-wrapper").style.display = "block";
+          document.getElementById("call-btn-camera").style.display = "flex";
+          document.getElementById("call-btn-camera").classList.remove("active");
+          try {
+            localMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById("call-video-local").srcObject = localMediaStream;
+          } catch(err) {
+            console.warn("Camera streams restricted in this context: ", err);
+          }
+        } else {
+          document.getElementById("call-video-wrapper").style.display = "none";
+          document.getElementById("call-btn-camera").style.display = "none";
+        }
+
+        // Set record on Firebase
+        await set(ref(db, `calls/${activeChatId}`), callData);
+        
+        startRingingSound();
+
+        // Auto-cancel if no answer after 45 seconds
+        if (callRingingTimeout) clearTimeout(callRingingTimeout);
+        callRingingTimeout = setTimeout(() => {
+          if (currentActiveCall && currentActiveCall.status === 'ringing') {
+            hangUpCall();
+          }
+        }, 45000);
+
+      } catch(e) {
+        console.error("Failed to start call: ", e);
+        alert("فشل بدء المكالمة. يرجى المحاولة لاحقاً.");
+        endCallLocally("failed");
+      }
+    }
+
+    async function acceptCall() {
+      if (!currentActiveCall) return;
+      try {
+        stopIncomingRingtone();
+        const callRef = ref(db, `calls/${currentActiveCall.id}`);
+        await update(callRef, { status: "connected" });
+      } catch(e) {
+        console.error("Error accepting call: ", e);
+      }
+    }
+
+    async function rejectCall() {
+      if (!currentActiveCall) return;
+      try {
+        stopIncomingRingtone();
+        const callRef = ref(db, `calls/${currentActiveCall.id}`);
+        await update(callRef, { status: "ended" });
+        setTimeout(() => {
+          set(callRef, null).catch(()=>{});
+        }, 1500);
+      } catch(e) {}
+      endCallLocally("rejected");
+    }
+
+    async function hangUpCall() {
+      if (!currentActiveCall) return;
+      const callId = currentActiveCall.id;
+      const wasConnected = currentActiveCall.status === 'connected';
+      
+      try {
+        stopRingingSound();
+        const callRef = ref(db, `calls/${callId}`);
+        await update(callRef, { status: "ended" });
+        
+        // Save to logs before removing
+        const durationText = document.getElementById("call-timer").textContent;
+        await saveCallToLogs(currentActiveCall, durationText, wasConnected);
+
+        // Write message record to the active chat log
+        const timestamp = Date.now();
+        const msgRef = ref(db, `messages/${callId}`);
+        const newMsgKey = push(msgRef).key;
+        
+        let msgText = "";
+        if (wasConnected) {
+          msgText = currentActiveCall.type === 'video' 
+            ? `📹 مكالمة فيديو منتهية (${durationText})` 
+            : `📞 مكالمة صوتية منتهية (${durationText})`;
+        } else {
+          msgText = `📞 مكالمة فائتة`;
+        }
+
+        const msgPayload = {
+          senderId: currentUserId,
+          text: msgText,
+          timestamp: timestamp,
+          read: false,
+          system: true
+        };
+
+        await set(ref(db, `messages/${callId}/${newMsgKey}`), msgPayload);
+
+        const chatRef = ref(db, `chats/${callId}`);
+        await update(chatRef, {
+          participants: [currentActiveCall.callerId, currentActiveCall.receiverId],
+          lastMessage: msgText,
+          lastMessageTime: timestamp,
+          lastSenderId: currentUserId,
+          lastMessageRead: false
+        });
+
+        setTimeout(() => {
+          set(callRef, null).catch(()=>{});
+        }, 1500);
+
+      } catch(e) {
+        console.error("Error hanging up: ", e);
+      }
+      endCallLocally("hung_up");
+    }
+
+    function endCallLocally(reason) {
+      if (callRingingTimeout) {
+        clearTimeout(callRingingTimeout);
+        callRingingTimeout = null;
+      }
+      
+      stopRingingSound();
+      stopIncomingRingtone();
+      
+      if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+      }
+
+      if (localMediaStream) {
+        try {
+          localMediaStream.getTracks().forEach(track => track.stop());
+        } catch(e){}
+        localMediaStream = null;
+      }
+
+      const remoteVideo = document.getElementById("call-video-remote");
+      const localVideo = document.getElementById("call-video-local");
+      if (remoteVideo) remoteVideo.srcObject = null;
+      if (localVideo) localVideo.srcObject = null;
+
+      document.getElementById("call-overlay").style.display = "none";
+      currentActiveCall = null;
+    }
+
+    function startGlobalCallsListener() {
+      if (callGlobalListener) {
+        callGlobalListener();
+        callGlobalListener = null;
+      }
+
+      const callsRef = ref(db, 'calls');
+      callGlobalListener = onValue(callsRef, (snapshot) => {
+        const data = snapshot.val();
+        
+        // Find if we are currently part of any call record
+        let activeRecord = null;
+        if (data) {
+          for (const key in data) {
+            const call = data[key];
+            if ((call.callerId === currentUserId || call.receiverId === currentUserId) && call.status !== 'ended') {
+              activeRecord = call;
+              break;
+            }
+          }
+        }
+
+        if (!activeRecord) {
+          if (currentActiveCall) {
+            endCallLocally("ended_by_remote");
+          }
+          return;
+        }
+
+        handleCallStateUpdate(activeRecord);
+      });
+    }
+
+    function handleCallStateUpdate(call) {
+      const isCaller = call.callerId === currentUserId;
+      currentActiveCall = call;
+
+      const otherUserId = isCaller ? call.receiverId : call.callerId;
+      const otherUser = allUsersCache[otherUserId] || { username: "مستخدم YH" };
+
+      // Ensure Call Overlay is visible
+      document.getElementById("call-overlay").style.display = "flex";
+      document.getElementById("call-user-name").textContent = otherUser.username;
+      
+      const avatarEl = document.getElementById("call-avatar");
+      setAvatar(avatarEl, otherUser);
+
+      document.getElementById("call-type-badge").textContent = call.type === 'video' ? "اتصال فيديو" : "اتصال صوتي";
+
+      if (call.status === 'ringing') {
+        if (isCaller) {
+          document.getElementById("call-status-text").textContent = "يرن الآن...";
+          document.getElementById("active-call-buttons").style.display = "flex";
+          document.getElementById("incoming-call-buttons").style.display = "none";
+          startRingingSound();
+        } else {
+          document.getElementById("call-status-text").textContent = "مكالمة واردة...";
+          document.getElementById("active-call-buttons").style.display = "none";
+          document.getElementById("incoming-call-buttons").style.display = "flex";
+          startIncomingRingtone();
+        }
+      } else if (call.status === 'connected') {
+        stopRingingSound();
+        stopIncomingRingtone();
+
+        document.getElementById("call-status-text").textContent = "متصل";
+        document.getElementById("active-call-buttons").style.display = "flex";
+        document.getElementById("incoming-call-buttons").style.display = "none";
+        document.getElementById("call-timer").style.display = "block";
+
+        if (call.type === 'video') {
+          document.getElementById("call-video-wrapper").style.display = "block";
+          document.getElementById("call-btn-camera").style.display = "flex";
+          
+          // Try loading local media streams
+          if (!localMediaStream) {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+              localMediaStream = stream;
+              document.getElementById("call-video-local").srcObject = stream;
+            }).catch(e => {
+              console.warn("Could not start local camera stream: ", e);
+            });
+          }
+        } else {
+          document.getElementById("call-video-wrapper").style.display = "none";
+          document.getElementById("call-btn-camera").style.display = "none";
+        }
+
+        // Start call duration timer if not already ticking
+        if (!callTimerInterval) {
+          callDurationSeconds = 0;
+          document.getElementById("call-timer").textContent = "00:00";
+          callTimerInterval = setInterval(() => {
+            callDurationSeconds++;
+            const mins = Math.floor(callDurationSeconds / 60).toString().padStart(2, "0");
+            const secs = (callDurationSeconds % 60).toString().padStart(2, "0");
+            document.getElementById("call-timer").textContent = `${mins}:${secs}`;
+          }, 1000);
+        }
+      }
+    }
+
+    async function saveCallToLogs(callObj, durationText, wasAnswered) {
+      try {
+        const timestamp = Date.now();
+        // Save log for caller
+        const callerLogRef = ref(db, `callLogs/${callObj.callerId}/${callObj.id}_${timestamp}`);
+        const callerLog = {
+          otherUserId: callObj.receiverId,
+          type: callObj.type,
+          direction: "outgoing",
+          answered: wasAnswered,
+          duration: durationText,
+          timestamp: timestamp
+        };
+        await set(callerLogRef, callerLog);
+        
+        // Save log for receiver
+        const receiverLogRef = ref(db, `callLogs/${callObj.receiverId}/${callObj.id}_${timestamp}`);
+        const receiverLog = {
+          otherUserId: callObj.callerId,
+          type: callObj.type,
+          direction: "incoming",
+          answered: wasAnswered,
+          duration: durationText,
+          timestamp: timestamp
+        };
+        await set(receiverLogRef, receiverLog);
+      } catch(e) {
+        console.error("Save call logs error: ", e);
+      }
+    }
+
+    function openCallsHistoryModal() {
+      toggleLeftDrawer(false);
+      const modal = document.getElementById("calls-history-modal");
+      if (modal) modal.style.display = "flex";
+      
+      const listDiv = document.getElementById("calls-history-list");
+      listDiv.innerHTML = `<div style="text-align: center; padding: 30px; color: var(--text-secondary); font-size: 14px;">جاري تحميل سجل المكالمات...</div>`;
+      
+      const logsRef = ref(db, `callLogs/${currentUserId}`);
+      get(logsRef).then((snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+          listDiv.innerHTML = `<div style="text-align: center; padding: 30px; color: var(--text-secondary); font-size: 14px;">لا توجد مكالمات سابقة.</div>`;
+          return;
+        }
+        
+        const logs = Object.values(data).sort((a,b) => b.timestamp - a.timestamp);
+        listDiv.innerHTML = "";
+        
+        logs.forEach(log => {
+          const otherUser = allUsersCache[log.otherUserId] || { username: "مستخدم YH", profilePic: "" };
+          let avatarHtml = "";
+          if (otherUser.profilePic) {
+            avatarHtml = `<div style="width: 44px; height: 44px; border-radius: 50%; background-image: url('${otherUser.profilePic}'); background-size: cover; background-position: center;"></div>`;
+          } else {
+            const char = otherUser.username.trim().charAt(0).toUpperCase();
+            avatarHtml = `<div style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px;">${char}</div>`;
+          }
+          
+          const timeStr = formatMessageTime(log.timestamp);
+          
+          const icon = log.direction === "incoming" 
+            ? (log.answered ? "📥" : "❌") 
+            : "📤";
+            
+          const directionText = log.direction === "incoming" 
+            ? (log.answered ? "مكالمة واردة" : "مكالمة فائتة") 
+            : "مكالمة صادرة";
+            
+          const durationText = log.answered ? `(${log.duration})` : "";
+          const callTypeIcon = log.type === "video" ? "📹" : "📞";
+          const statusColor = log.answered ? "#30d158" : "#ec3d3d";
+          
+          const itemHtml = `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.04);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                ${avatarHtml}
+                <div>
+                  <div style="font-weight: bold; font-size: 15px; color: var(--text-primary);">${otherUser.username}</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                    <span style="color: ${statusColor}; font-size: 10px;">${icon}</span>
+                    <span>${directionText} ${durationText}</span>
+                  </div>
+                </div>
+              </div>
+              <div style="text-align: left;">
+                <div style="font-size: 16px; margin-bottom: 2px;">${callTypeIcon}</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">${timeStr}</div>
+              </div>
+            </div>
+          `;
+          listDiv.innerHTML += itemHtml;
+        });
+      }).catch(err => {
+        console.error("Error loading call logs: ", err);
+        listDiv.innerHTML = `<div style="text-align: center; padding: 30px; color: var(--text-secondary); font-size: 14px;">حدث خطأ أثناء تحميل سجل المكالمات.</div>`;
+      });
+    }
+
+    function closeCallsHistoryModal() {
+      const modal = document.getElementById("calls-history-modal");
+      if (modal) modal.style.display = "none";
+    }
+
+    function toggleCallMute() {
+      if (!localMediaStream) return;
+      isCallMuted = !isCallMuted;
+      localMediaStream.getAudioTracks().forEach(track => {
+        track.enabled = !isCallMuted;
+      });
+      const btn = document.getElementById("call-btn-mute");
+      if (isCallMuted) {
+        btn.classList.add("active");
+        btn.innerHTML = "🎙️❌";
+      } else {
+        btn.classList.remove("active");
+        btn.innerHTML = "🎙️";
+      }
+    }
+
+    // Export to window
+    window.startCall = startCall;
+    window.acceptCall = acceptCall;
+    window.rejectCall = rejectCall;
+    window.hangUpCall = hangUpCall;
+    window.toggleCallMute = toggleCallMute;
+    window.openCallsHistoryModal = openCallsHistoryModal;
+    window.closeCallsHistoryModal = closeCallsHistoryModal;
 
     // Boot initialize recording triggers
     document.addEventListener("DOMContentLoaded", () => {
