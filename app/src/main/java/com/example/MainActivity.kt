@@ -324,10 +324,18 @@ fun TelegramWebView(modifier: Modifier = Modifier) {
         webChromeClient = object : WebChromeClient() {
           override fun onPermissionRequest(request: PermissionRequest?) {
             try {
-              request?.grant(request.resources)
+              val resources = request?.resources ?: emptyArray()
+              request?.grant(resources)
             } catch (e: Exception) {
               e.printStackTrace()
             }
+          }
+
+          override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
+            consoleMessage?.let {
+              android.util.Log.d("WebViewConsole", "${it.message()} -- From line ${it.lineNumber()} of ${it.sourceId()}")
+            }
+            return true
           }
         }
         loadUrl("https://appassets.androidplatform.net/assets/index.html")

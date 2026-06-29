@@ -3562,6 +3562,7 @@
     // ==========================================
     let chatsCachedData = [];
 
+    let isInitialChatsLoad = true;
     function startChatsListListener() {
       const chatsRef = ref(db, 'chats/');
       
@@ -3605,6 +3606,37 @@
         
         // Sort chats by most recent message time descending
         chatsCachedData.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+
+        // Track and notify for new messages
+        chatsCachedData.forEach((chat) => {
+          const lastTimeKey = `msg_time_${chat.chatId}`;
+          const previousTime = parseInt(localStorage.getItem(lastTimeKey) || "0");
+          
+          if (isInitialChatsLoad) {
+            if (chat.lastMessageTime > previousTime) {
+              localStorage.setItem(lastTimeKey, chat.lastMessageTime.toString());
+            }
+          } else {
+            if (chat.lastMessageTime > previousTime && chat.lastSenderId && chat.lastSenderId !== currentUserId) {
+              localStorage.setItem(lastTimeKey, chat.lastMessageTime.toString());
+              
+              if (chat.chatId !== activeChatId) {
+                const otherUser = allUsersCache[chat.otherUserId];
+                const senderName = otherUser ? otherUser.username : "رسالة جديدة";
+                if (typeof AndroidBridge !== "undefined") {
+                  try {
+                    AndroidBridge.showMessageNotification(senderName, chat.lastMessage || "أرسل رسالة", chat.chatId);
+                  } catch(e) {
+                    console.error("AndroidBridge message notify error: ", e);
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        isInitialChatsLoad = false;
+        
         renderChatsListHTML();
       });
     }
@@ -5986,7 +6018,12 @@
           if (event.candidate) {
             const role = isCaller ? "caller" : "receiver";
             const candidateRef = push(ref(db, `calls/${callId}/candidates/${role}`));
-            set(candidateRef, JSON.stringify(event.candidate)).catch(err => console.error(err));
+            const plainCandidate = {
+              candidate: event.candidate.candidate,
+              sdpMid: event.candidate.sdpMid,
+              sdpMLineIndex: event.candidate.sdpMLineIndex
+            };
+            set(candidateRef, JSON.stringify(plainCandidate)).catch(err => console.error(err));
           }
         };
 
@@ -5994,7 +6031,11 @@
         if (isCaller) {
           const offer = await peerConnection.createOffer();
           await peerConnection.setLocalDescription(offer);
-          await set(ref(db, `calls/${callId}/offer`), JSON.stringify(offer));
+          const plainOffer = {
+            type: offer.type,
+            sdp: offer.sdp
+          };
+          await set(ref(db, `calls/${callId}/offer`), JSON.stringify(plainOffer));
           
           // Listen for Answer SDP
           const answerRef = ref(db, `calls/${callId}/answer`);
@@ -6034,7 +6075,11 @@
                 
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
-                await set(ref(db, `calls/${callId}/answer`), JSON.stringify(answer));
+                const plainAnswer = {
+                  type: answer.type,
+                  sdp: answer.sdp
+                };
+                await set(ref(db, `calls/${callId}/answer`), JSON.stringify(plainAnswer));
                 await processCandidatesQueue();
               } catch(e) {
                 console.error("Set remote offer error on receiver: ", e);
@@ -6326,6 +6371,12 @@
       stopRingingSound();
       stopIncomingRingtone();
       closePeerConnection();
+
+      if (typeof AndroidBridge !== "undefined") {
+        try {
+          AndroidBridge.cancelCallNotification();
+        } catch(e){}
+      }
       
       if (callTimerInterval) {
         clearInterval(callTimerInterval);
@@ -6403,10 +6454,24 @@
           document.getElementById("active-call-buttons").style.display = "none";
           document.getElementById("incoming-call-buttons").style.display = "flex";
           startIncomingRingtone();
+          
+          if (typeof AndroidBridge !== "undefined") {
+            try {
+              AndroidBridge.showCallNotification(otherUser.username, call.id);
+            } catch(e) {
+              console.error("AndroidBridge error: ", e);
+            }
+          }
         }
       } else if (call.status === 'connected') {
         stopRingingSound();
         stopIncomingRingtone();
+        
+        if (typeof AndroidBridge !== "undefined") {
+          try {
+            AndroidBridge.cancelCallNotification();
+          } catch(e){}
+        }
 
         document.getElementById("call-status-text").textContent = "متصل";
         document.getElementById("active-call-buttons").style.display = "flex";
@@ -6559,6 +6624,29 @@
     window.toggleCallMute = toggleCallMute;
     window.openCallsHistoryModal = openCallsHistoryModal;
     window.closeCallsHistoryModal = closeCallsHistoryModal;
+
+    window.handleNotificationAction = function(action, id) {
+      console.log("handleNotificationAction called from native:", action, id);
+      if (action === "answer") {
+        if (typeof acceptCall === "function") {
+          acceptCall();
+        }
+      } else if (action === "decline") {
+        if (typeof rejectCall === "function") {
+          rejectCall();
+        }
+      } else if (action === "open_chat") {
+        if (id) {
+          const parts = id.split("_");
+          if (parts && parts.length > 0) {
+            const otherUserId = parts.find(p => p !== currentUserId);
+            if (otherUserId && typeof selectUserToChat === "function") {
+              selectUserToChat(otherUserId);
+            }
+          }
+        }
+      }
+    };
 
     // Boot initialize recording triggers
     document.addEventListener("DOMContentLoaded", () => {
