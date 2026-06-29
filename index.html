@@ -3365,9 +3365,13 @@
 
         // Apply updated presence state immediately
         const presenceRef = ref(db, `users/${currentUserId}/online`);
+        const userStatusRef = ref(db, `users/${currentUserId}`);
         if (showOnlineVal) {
           await set(presenceRef, true);
-          onDisconnect(presenceRef).remove();
+          onDisconnect(userStatusRef).update({
+            online: false,
+            lastSeen: serverTimestamp()
+          });
         } else {
           await set(presenceRef, null);
         }
@@ -4938,6 +4942,43 @@
       }
     }
 
+    function formatLastSeen(timestamp) {
+      if (!timestamp) return "غير متصل";
+      
+      const now = new Date();
+      const lastSeenDate = new Date(timestamp);
+      const diffMs = now - lastSeenDate;
+      const diffMins = Math.floor(diffMs / 60000);
+      
+      if (diffMins < 1) {
+        return "نشط منذ قليل";
+      }
+      if (diffMins < 60) {
+        return `آخر ظهور منذ ${diffMins} د`;
+      }
+      
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) {
+        // Same calendar day?
+        if (now.getDate() === lastSeenDate.getDate() && now.getMonth() === lastSeenDate.getMonth() && now.getFullYear() === lastSeenDate.getFullYear()) {
+          return `آخر ظهور اليوم ${formatMessageTime(timestamp)}`;
+        }
+      }
+      
+      // Yesterday?
+      const yesterday = new Date();
+      yesterday.setDate(now.getDate() - 1);
+      if (yesterday.getDate() === lastSeenDate.getDate() && yesterday.getMonth() === lastSeenDate.getMonth() && yesterday.getFullYear() === lastSeenDate.getFullYear()) {
+        return `آخر ظهور أمس ${formatMessageTime(timestamp)}`;
+      }
+      
+      // Older
+      const day = lastSeenDate.getDate();
+      const month = lastSeenDate.getMonth() + 1;
+      const year = lastSeenDate.getFullYear();
+      return `آخر ظهور في ${day}/${month}/${year} ${formatMessageTime(timestamp)}`;
+    }
+
     function updateActiveChatHeaderStatus() {
       if (!activeChatUserId) return;
       const otherUser = allUsersCache[activeChatUserId];
@@ -4972,7 +5013,11 @@
       if (isOnline) {
         statusEl.innerHTML = `<span style="color: #30d158; font-weight: bold; display: inline-flex; align-items: center; gap: 4px;">● متصل</span>`;
       } else {
-        statusEl.textContent = otherUser.phone ? "عبر الهاتف" : "عبر البريد";
+        if (otherUser.lastSeen) {
+          statusEl.textContent = formatLastSeen(otherUser.lastSeen);
+        } else {
+          statusEl.textContent = otherUser.phone ? "آخر ظهور: عبر الهاتف" : "آخر ظهور: عبر البريد";
+        }
       }
     }
 
@@ -4989,10 +5034,14 @@
         if (snap.val() === true) {
           const showOnline = currentUserData && currentUserData.showOnlineStatus !== false;
           const presenceRef = ref(db, `users/${currentUserId}/online`);
+          const userRef = ref(db, `users/${currentUserId}`);
           
           if (showOnline) {
             await set(presenceRef, true);
-            onDisconnect(presenceRef).remove();
+            onDisconnect(userRef).update({
+              online: false,
+              lastSeen: serverTimestamp()
+            });
           } else {
             await set(presenceRef, null);
           }
