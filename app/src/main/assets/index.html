@@ -3625,6 +3625,16 @@
             try {
               const requestRef = ref(db, `chatRequests/${req.id}`);
               await update(requestRef, { status: "accepted" });
+              
+              // Also initialize chat room so it appears in chats list instantly
+              const chatRef = ref(db, `chats/${req.id}`);
+              await update(chatRef, {
+                participants: [req.senderId, req.receiverId],
+                lastMessage: "",
+                lastMessageTime: Date.now(),
+                lastSenderId: "",
+                lastMessageRead: true
+              });
             } catch (err) {
               console.error("Accept request err: ", err);
             }
@@ -3992,6 +4002,16 @@
       try {
         const requestRef = ref(db, `chatRequests/${activeChatId}`);
         await update(requestRef, { status: "accepted" });
+        
+        // Also initialize chat room so it appears in chats list instantly
+        const chatRef = ref(db, `chats/${activeChatId}`);
+        await update(chatRef, {
+          participants: [currentUserId, activeChatUserId],
+          lastMessage: "",
+          lastMessageTime: Date.now(),
+          lastSenderId: "",
+          lastMessageRead: true
+        });
       } catch (err) {
         console.error("Error accepting chat request: ", err);
         alert("فشل قبول طلب المحادثة.");
