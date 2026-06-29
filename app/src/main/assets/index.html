@@ -1978,7 +1978,6 @@
             </div>
             <div class="chat-actions">
               <button class="chat-action-btn" onclick="startCall('voice')" title="اتصال صوتي" style="font-size: 16px;">📞</button>
-              <button class="chat-action-btn" onclick="startCall('video')" title="اتصال فيديو" style="font-size: 16px;">📹</button>
               <button class="chat-action-btn" onclick="toggleRightPanel(true)" title="معلومات المحادثة">ℹ️</button>
             </div>
           </div>
@@ -2171,11 +2170,8 @@
       <!-- Call Overlay Panel   -->
       <!-- ==================== -->
       <div class="call-overlay" id="call-overlay" style="display: none;">
-        <!-- Video Streams (shown during video call) -->
-        <div class="call-video-wrapper" id="call-video-wrapper">
-          <video class="call-video-remote" id="call-video-remote" autoplay playsinline></video>
-          <video class="call-video-local" id="call-video-local" autoplay playsinline muted></video>
-        </div>
+        <!-- Invisible Remote Audio Player for WebRTC Stream -->
+        <audio id="call-remote-audio" autoplay playsinline style="display: none;"></audio>
 
         <!-- Call Info Panel -->
         <div class="call-header-info">
@@ -2197,7 +2193,6 @@
           <!-- Buttons for active connected call or outgoing call -->
           <div class="call-buttons-row" id="active-call-buttons">
             <button class="call-btn call-btn-mute" id="call-btn-mute" onclick="toggleCallMute()" title="كتم الصوت">🎙️</button>
-            <button class="call-btn call-btn-camera" id="call-btn-camera" onclick="toggleCallCamera()" style="display: none;" title="الكاميرا">📹</button>
             <button class="call-btn call-btn-speaker" id="call-btn-speaker" onclick="toggleCallSpeaker()" title="مكبر الصوت">🔊</button>
             <button class="call-btn call-btn-hangup" onclick="hangUpCall()" title="إنهاء المكالمة">🔴</button>
           </div>
@@ -5882,7 +5877,7 @@
     };
 
     // ==========================================
-    // Interactive Calling & Real-Time Audio/Video System
+    // Interactive Calling & Real-Time Audio System (WebRTC over Firebase)
     // ==========================================
     let currentActiveCall = null;
     let callTimerInterval = null;
@@ -5890,10 +5885,146 @@
     let ringbackInterval = null;
     let localMediaStream = null;
     let isCallMuted = false;
-    let isCallCameraOff = false;
     let isCallSpeakerOn = false;
     let callGlobalListener = null;
     let callRingingTimeout = null;
+
+    let peerConnection = null;
+    let iceCandidatesListeners = [];
+    const rtcConfig = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" }
+      ]
+    };
+
+    function closePeerConnection() {
+      if (peerConnection) {
+        try {
+          peerConnection.close();
+        } catch(e){}
+        peerConnection = null;
+      }
+      iceCandidatesListeners.forEach(unsubscribe => {
+        try { unsubscribe(); } catch(e){}
+      });
+      iceCandidatesListeners = [];
+      const remoteAudio = document.getElementById("call-remote-audio");
+      if (remoteAudio) {
+        remoteAudio.srcObject = null;
+      }
+    }
+
+    async function initializePeerConnection(isCaller, callId) {
+      if (peerConnection) return;
+      
+      try {
+        peerConnection = new RTCPeerConnection(rtcConfig);
+        
+        // Setup local audio
+        try {
+          localMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          localMediaStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localMediaStream);
+          });
+        } catch(err) {
+          console.error("Microphone access failed: ", err);
+          alert("تنبيه: يرجى السماح بالوصول إلى الميكروفون لإجراء المكالمة الصوتية.");
+        }
+        
+        // Handle remote tracks
+        peerConnection.ontrack = (event) => {
+          console.log("Remote WebRTC audio track received!");
+          const remoteAudio = document.getElementById("call-remote-audio");
+          if (remoteAudio && event.streams[0]) {
+            remoteAudio.srcObject = event.streams[0];
+            remoteAudio.play().catch(e => console.error("Audio playback error: ", e));
+          }
+        };
+
+        // Handle local ice candidates -> send to Firebase
+        peerConnection.onicecandidate = (event) => {
+          if (event.candidate) {
+            const role = isCaller ? "caller" : "receiver";
+            const candidateRef = push(ref(db, `calls/${callId}/candidates/${role}`));
+            set(candidateRef, JSON.stringify(event.candidate)).catch(err => console.error(err));
+          }
+        };
+
+        // If Caller, create SDP Offer
+        if (isCaller) {
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+          await set(ref(db, `calls/${callId}/offer`), JSON.stringify(offer));
+          
+          // Listen for Answer SDP
+          const answerRef = ref(db, `calls/${callId}/answer`);
+          const unsubAnswer = onValue(answerRef, async (snapshot) => {
+            const val = snapshot.val();
+            if (val && peerConnection && peerConnection.signalingState === 'have-local-offer') {
+              try {
+                const sdp = new RTCSessionDescription(JSON.parse(val));
+                await peerConnection.setRemoteDescription(sdp);
+              } catch(e) {
+                console.error("Set remote description error on caller: ", e);
+              }
+            }
+          });
+          iceCandidatesListeners.push(unsubAnswer);
+
+          // Listen for Receiver Candidates
+          const rcRef = ref(db, `calls/${callId}/candidates/receiver`);
+          const unsubRc = onChildAdded(rcRef, async (snapshot) => {
+            const val = snapshot.val();
+            if (val && peerConnection) {
+              try {
+                const cand = new RTCIceCandidate(JSON.parse(val));
+                await peerConnection.addIceCandidate(cand);
+              } catch(e) {}
+            }
+          });
+          iceCandidatesListeners.push(unsubRc);
+
+        } else {
+          // If Receiver, listen for SDP Offer
+          const offerRef = ref(db, `calls/${callId}/offer`);
+          const unsubOffer = onValue(offerRef, async (snapshot) => {
+            const val = snapshot.val();
+            if (val && peerConnection && peerConnection.signalingState === 'stable') {
+              try {
+                const sdp = new RTCSessionDescription(JSON.parse(val));
+                await peerConnection.setRemoteDescription(sdp);
+                
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                await set(ref(db, `calls/${callId}/answer`), JSON.stringify(answer));
+              } catch(e) {
+                console.error("Set remote offer error on receiver: ", e);
+              }
+            }
+          });
+          iceCandidatesListeners.push(unsubOffer);
+
+          // Listen for Caller Candidates
+          const ccRef = ref(db, `calls/${callId}/candidates/caller`);
+          const unsubCc = onChildAdded(ccRef, async (snapshot) => {
+            const val = snapshot.val();
+            if (val && peerConnection) {
+              try {
+                const cand = new RTCIceCandidate(JSON.parse(val));
+                await peerConnection.addIceCandidate(cand);
+              } catch(e) {}
+            }
+          });
+          iceCandidatesListeners.push(unsubCc);
+        }
+
+      } catch (err) {
+        console.error("PeerConnection initialization failed: ", err);
+      }
+    }
 
     // Web Audio API Ringtone / Dial-tone Synthesizers
     let ringOsc1 = null;
@@ -6014,7 +6145,7 @@
     }
 
     // Main Calling Core
-    async function startCall(type = 'voice') {
+    async function startCall() {
       if (currentActiveCall) return;
       if (!activeChatId || !activeChatUserId) {
         alert("يرجى اختيار محادثة أولاً لبدء مكالمة.");
@@ -6030,7 +6161,7 @@
           id: activeChatId,
           callerId: currentUserId,
           receiverId: activeChatUserId,
-          type: type,
+          type: "voice",
           status: "ringing",
           timestamp: Date.now()
         };
@@ -6039,7 +6170,7 @@
         
         // Show Call Overlay
         document.getElementById("call-overlay").style.display = "flex";
-        document.getElementById("call-type-badge").textContent = type === 'video' ? "اتصال فيديو" : "اتصال صوتي";
+        document.getElementById("call-type-badge").textContent = "اتصال صوتي";
         document.getElementById("call-user-name").textContent = otherUser.username;
         document.getElementById("call-status-text").textContent = "يرن الآن...";
         document.getElementById("call-timer").style.display = "none";
@@ -6053,25 +6184,9 @@
         document.getElementById("incoming-call-buttons").style.display = "none";
 
         isCallMuted = false;
-        isCallCameraOff = false;
         isCallSpeakerOn = false;
         document.getElementById("call-btn-mute").classList.remove("active");
         document.getElementById("call-btn-speaker").classList.remove("active");
-        
-        if (type === 'video') {
-          document.getElementById("call-video-wrapper").style.display = "block";
-          document.getElementById("call-btn-camera").style.display = "flex";
-          document.getElementById("call-btn-camera").classList.remove("active");
-          try {
-            localMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById("call-video-local").srcObject = localMediaStream;
-          } catch(err) {
-            console.warn("Camera streams restricted in this context: ", err);
-          }
-        } else {
-          document.getElementById("call-video-wrapper").style.display = "none";
-          document.getElementById("call-btn-camera").style.display = "none";
-        }
 
         // Set record on Firebase
         await set(ref(db, `calls/${activeChatId}`), callData);
@@ -6136,14 +6251,9 @@
         const msgRef = ref(db, `messages/${callId}`);
         const newMsgKey = push(msgRef).key;
         
-        let msgText = "";
-        if (wasConnected) {
-          msgText = currentActiveCall.type === 'video' 
-            ? `📹 مكالمة فيديو منتهية (${durationText})` 
-            : `📞 مكالمة صوتية منتهية (${durationText})`;
-        } else {
-          msgText = `📞 مكالمة فائتة`;
-        }
+        let msgText = wasConnected 
+          ? `📞 مكالمة صوتية منتهية (${durationText})` 
+          : `📞 مكالمة فائتة`;
 
         const msgPayload = {
           senderId: currentUserId,
@@ -6182,6 +6292,7 @@
       
       stopRingingSound();
       stopIncomingRingtone();
+      closePeerConnection();
       
       if (callTimerInterval) {
         clearInterval(callTimerInterval);
@@ -6194,11 +6305,6 @@
         } catch(e){}
         localMediaStream = null;
       }
-
-      const remoteVideo = document.getElementById("call-video-remote");
-      const localVideo = document.getElementById("call-video-local");
-      if (remoteVideo) remoteVideo.srcObject = null;
-      if (localVideo) localVideo.srcObject = null;
 
       document.getElementById("call-overlay").style.display = "none";
       currentActiveCall = null;
@@ -6251,7 +6357,7 @@
       const avatarEl = document.getElementById("call-avatar");
       setAvatar(avatarEl, otherUser);
 
-      document.getElementById("call-type-badge").textContent = call.type === 'video' ? "اتصال فيديو" : "اتصال صوتي";
+      document.getElementById("call-type-badge").textContent = "اتصال صوتي";
 
       if (call.status === 'ringing') {
         if (isCaller) {
@@ -6274,23 +6380,8 @@
         document.getElementById("incoming-call-buttons").style.display = "none";
         document.getElementById("call-timer").style.display = "block";
 
-        if (call.type === 'video') {
-          document.getElementById("call-video-wrapper").style.display = "block";
-          document.getElementById("call-btn-camera").style.display = "flex";
-          
-          // Try loading local media streams
-          if (!localMediaStream) {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-              localMediaStream = stream;
-              document.getElementById("call-video-local").srcObject = stream;
-            }).catch(e => {
-              console.warn("Could not start local camera stream: ", e);
-            });
-          }
-        } else {
-          document.getElementById("call-video-wrapper").style.display = "none";
-          document.getElementById("call-btn-camera").style.display = "none";
-        }
+        // Initialize Peer-to-Peer Audio Call Routing via WebRTC!
+        initializePeerConnection(isCaller, call.id);
 
         // Start call duration timer if not already ticking
         if (!callTimerInterval) {
