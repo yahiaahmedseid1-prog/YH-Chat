@@ -43,6 +43,10 @@ class MainActivity : ComponentActivity() {
     private const val NOTIFICATION_CALL_ID = 9999
   }
 
+  var pendingAction: String? = null
+  var pendingId: String? = null
+  var isWebPageLoaded = false
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
@@ -83,24 +87,39 @@ class MainActivity : ComponentActivity() {
     handleIntent(intent)
   }
 
+  fun processPendingNotificationAction() {
+    val action = pendingAction ?: return
+    val id = pendingId ?: ""
+    WebNotificationBridge.executeJS("window.handleNotificationAction('$action', '$id')")
+    pendingAction = null
+    pendingId = null
+  }
+
   private fun handleIntent(intent: Intent?) {
     intent?.let {
-      when (it.action) {
-        ACTION_ANSWER_CALL -> {
-          val callId = it.getStringExtra(EXTRA_CALL_ID) ?: ""
-          WebNotificationBridge.executeJS("window.handleNotificationAction('answer', '$callId')")
+      val action = when (it.action) {
+        ACTION_ANSWER_CALL -> "answer"
+        ACTION_DECLINE_CALL -> "decline"
+        ACTION_OPEN_CHAT -> "open_chat"
+        else -> null
+      }
+      if (action != null) {
+        val id = if (action == "open_chat") {
+          it.getStringExtra(EXTRA_CHAT_ID) ?: ""
+        } else {
+          it.getStringExtra(EXTRA_CALL_ID) ?: ""
+        }
+        
+        pendingAction = action
+        pendingId = id
+        
+        if (isWebPageLoaded) {
+          processPendingNotificationAction()
+        }
+        
+        if (action == "answer" || action == "decline") {
           cancelCallNotification()
         }
-        ACTION_DECLINE_CALL -> {
-          val callId = it.getStringExtra(EXTRA_CALL_ID) ?: ""
-          WebNotificationBridge.executeJS("window.handleNotificationAction('decline', '$callId')")
-          cancelCallNotification()
-        }
-        ACTION_OPEN_CHAT -> {
-          val chatId = it.getStringExtra(EXTRA_CHAT_ID) ?: ""
-          WebNotificationBridge.executeJS("window.handleNotificationAction('open_chat', '$chatId')")
-        }
-        else -> {}
       }
     }
   }
@@ -133,12 +152,19 @@ class MainActivity : ComponentActivity() {
       val messageChannel = NotificationChannel(
         "message_channel",
         "الرسائل الجديدة",
-        NotificationManager.IMPORTANCE_DEFAULT
+        NotificationManager.IMPORTANCE_HIGH
       ).apply {
         description = "إشعارات الرسائل والدردشة"
         enableLights(true)
         lightColor = Color.BLUE
         enableVibration(true)
+        setSound(
+          Settings.System.DEFAULT_NOTIFICATION_URI,
+          AudioAttributes.Builder()
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .build()
+        )
       }
       notificationManager.createNotificationChannel(messageChannel)
     }
@@ -221,8 +247,9 @@ class MainActivity : ComponentActivity() {
       .setSmallIcon(android.R.drawable.stat_notify_chat)
       .setContentTitle(title)
       .setContentText(body)
-      .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+      .setSound(Settings.System.DEFAULT_NOTIFICATION_URI)
       .setAutoCancel(true)
       .setContentIntent(pendingIntent)
         
@@ -244,6 +271,14 @@ class WebAppInterface(private val activity: MainActivity) {
   @JavascriptInterface
   fun showMessageNotification(title: String, body: String, chatId: String) {
     activity.showMessageNotification(title, body, chatId)
+  }
+
+  @JavascriptInterface
+  fun onPageReady() {
+    activity.runOnUiThread {
+      activity.isWebPageLoaded = true
+      activity.processPendingNotificationAction()
+    }
   }
 }
 

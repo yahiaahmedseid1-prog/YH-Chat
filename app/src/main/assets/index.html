@@ -3623,6 +3623,7 @@
               if (chat.chatId !== activeChatId) {
                 const otherUser = allUsersCache[chat.otherUserId];
                 const senderName = otherUser ? otherUser.username : "رسالة جديدة";
+                playDeliveredSound();
                 if (typeof AndroidBridge !== "undefined") {
                   try {
                     AndroidBridge.showMessageNotification(senderName, chat.lastMessage || "أرسل رسالة", chat.chatId);
@@ -4460,6 +4461,7 @@
           const updates = {};
           let needsUpdate = false;
           let playDelivered = false;
+          let playReceived = false;
           let unreadDividerInserted = false;
 
           mergedMessages.forEach((item) => {
@@ -4473,6 +4475,9 @@
             if (isUnreadMessage) {
               updates[`${msgKey}/read`] = true;
               needsUpdate = true;
+              if (!isInitialLoad) {
+                playReceived = true;
+              }
             }
 
             if (isUnreadMessage && !unreadDividerInserted) {
@@ -4602,7 +4607,7 @@
             msgBox.appendChild(bubble);
           });
 
-          if (playDelivered) {
+          if (playDelivered || playReceived) {
             playDeliveredSound();
           }
           isInitialLoad = false;
@@ -6647,6 +6652,15 @@
         }
       }
     };
+
+    // Notify native side that the page is fully initialized and ready
+    if (typeof AndroidBridge !== "undefined" && typeof AndroidBridge.onPageReady === "function") {
+      try {
+        AndroidBridge.onPageReady();
+      } catch(e) {
+        console.error("onPageReady call failed: ", e);
+      }
+    }
 
     // Boot initialize recording triggers
     document.addEventListener("DOMContentLoaded", () => {
