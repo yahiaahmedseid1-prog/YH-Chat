@@ -2460,6 +2460,8 @@
     let blockListenerOther = null;
     let chatsListListener = null;
     let typingListener = null;
+    let globalTypingListener = null;
+    let globalTypingData = {};
     let connectedListener = null;
     let isTypingLocally = false;
     let typingTimeout = null;
@@ -2543,6 +2545,7 @@
 
           // Start syncing active databases
           startChatsListListener();
+          startGlobalTypingListener();
           startChatRequestsListener();
           fetchAllUsers();
           startPresenceSystem();
@@ -3305,6 +3308,18 @@
       });
     }
 
+    function startGlobalTypingListener() {
+      if (globalTypingListener) {
+        globalTypingListener();
+        globalTypingListener = null;
+      }
+      const typingRef = ref(db, 'typing');
+      globalTypingListener = onValue(typingRef, (snapshot) => {
+        globalTypingData = snapshot.val() || {};
+        renderChatsListHTML();
+      });
+    }
+
     function renderChatsListHTML() {
       const chatsListDiv = document.getElementById("chats-list-items");
       chatsListDiv.innerHTML = "";
@@ -3393,8 +3408,10 @@
           avatarContent = "";
         }
 
+        const isTyping = globalTypingData[chat.chatId] && globalTypingData[chat.chatId][chat.otherUserId] === true;
+
         let listCheckmarks = "";
-        if (chat.lastSenderId === currentUserId && chat.lastMessage) {
+        if (!isTyping && chat.lastSenderId === currentUserId && chat.lastMessage) {
           const checkSymbol = chat.lastMessageRead === true ? "✓✓" : "✓";
           const colorSymbol = chat.lastMessageRead === true ? "#30d158" : "rgba(255, 255, 255, 0.4)";
           listCheckmarks = `<span style="color: ${colorSymbol}; font-weight: bold; margin-left: 5px; font-size: 11px; display: inline-block; vertical-align: middle;">${checkSymbol}</span>`;
@@ -3404,7 +3421,13 @@
         const onlineDotHtml = isOnline ? `<div class="online-indicator" title="متصل"></div>` : "";
 
         const highlightedName = highlightText(otherUser.username, searchQuery);
-        const highlightedLastMessage = chat.lastMessage ? highlightText(chat.lastMessage, searchQuery) : "بدء المحادثة...";
+        
+        let displayedSubtext = "";
+        if (isTyping) {
+          displayedSubtext = `<span style="color: #30d158; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">يكتب الآن...</span>`;
+        } else {
+          displayedSubtext = chat.lastMessage ? highlightText(chat.lastMessage, searchQuery) : "بدء المحادثة...";
+        }
 
         item.innerHTML = `
           <div class="avatar" style="${avatarStyle}">${avatarContent}${onlineDotHtml}</div>
@@ -3415,7 +3438,7 @@
             </div>
             <div class="item-subtext" style="display: flex; align-items: center; justify-content: flex-start; ${isUnread ? 'font-weight: 600; color: var(--text-primary);' : ''}">
               ${listCheckmarks}
-              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${highlightedLastMessage}</span>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${displayedSubtext}</span>
               ${isUnread ? `<span class="unread-badge-text" style="background-color: #30d158; color: white; border-radius: 10px; padding: 2px 7px; font-size: 10px; font-weight: bold; margin-right: 6px; margin-left: 2px; white-space: nowrap; box-shadow: 0 1px 4px rgba(48,209,88,0.4);">جديدة</span>` : ''}
             </div>
           </div>
@@ -3519,6 +3542,7 @@
       // Helper function to render a request item
       function createRequestElement(req, type) {
         const otherUserId = (type === "received") ? req.senderId : req.receiverId;
+        if (otherUserId === currentUserId) return null;
         const otherUser = allUsersCache[otherUserId];
         if (!otherUser) return null;
         
@@ -4576,6 +4600,10 @@
         typingListener();
         typingListener = null;
       }
+      if (globalTypingListener) {
+        globalTypingListener();
+        globalTypingListener = null;
+      }
       if (activeChatListener) {
         activeChatListener();
         activeChatListener = null;
@@ -4600,6 +4628,18 @@
       
       const statusEl = document.getElementById("active-chat-status");
       if (!statusEl) return;
+
+      const headerAvatar = document.getElementById("active-chat-avatar");
+      if (headerAvatar && otherUser) {
+        setAvatar(headerAvatar, otherUser);
+        if (otherUser.online === true) {
+          const dot = document.createElement("div");
+          dot.className = "online-indicator";
+          dot.title = "متصل";
+          headerAvatar.style.position = "relative";
+          headerAvatar.appendChild(dot);
+        }
+      }
 
       if (!otherUser || otherUser.deleted === true || otherUser.deleted === "true" || otherUser.isDeleted === true || otherUser.username === "حساب محذوف" || otherUser.username.includes("محذوف")) {
         statusEl.textContent = "حساب محذوف";
