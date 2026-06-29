@@ -64,6 +64,7 @@ fun TelegramWebView(modifier: Modifier = Modifier) {
           mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
           allowContentAccess = true
           allowFileAccess = true
+          mediaPlaybackRequiresUserGesture = false
         }
         webViewClient = WebViewClient()
         webChromeClient = object : WebChromeClient() {

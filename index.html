@@ -2171,7 +2171,7 @@
       <!-- ==================== -->
       <div class="call-overlay" id="call-overlay" style="display: none;">
         <!-- Invisible Remote Audio Player for WebRTC Stream -->
-        <audio id="call-remote-audio" autoplay playsinline style="display: none;"></audio>
+        <audio id="call-remote-audio" autoplay playsinline style="position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px;"></audio>
 
         <!-- Call Info Panel -->
         <div class="call-header-info">
@@ -5920,6 +5920,37 @@
     async function initializePeerConnection(isCaller, callId) {
       if (peerConnection) return;
       
+      let remoteCandidatesQueue = [];
+
+      async function addOrQueueCandidate(candidateData) {
+        try {
+          const cand = new RTCIceCandidate(candidateData);
+          if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+            await peerConnection.addIceCandidate(cand);
+            console.log("Successfully added ICE candidate directly!");
+          } else {
+            remoteCandidatesQueue.push(cand);
+            console.log("Queued ICE candidate (remoteDescription not set yet)");
+          }
+        } catch(e) {
+          console.error("Error adding/queuing candidate: ", e);
+        }
+      }
+
+      async function processCandidatesQueue() {
+        if (!peerConnection) return;
+        console.log("Processing queued ICE candidates: ", remoteCandidatesQueue.length);
+        for (const cand of remoteCandidatesQueue) {
+          try {
+            await peerConnection.addIceCandidate(cand);
+            console.log("Successfully added queued ICE candidate!");
+          } catch(e) {
+            console.error("Error adding queued candidate: ", e);
+          }
+        }
+        remoteCandidatesQueue = [];
+      }
+
       try {
         peerConnection = new RTCPeerConnection(rtcConfig);
         
@@ -5938,9 +5969,15 @@
         peerConnection.ontrack = (event) => {
           console.log("Remote WebRTC audio track received!");
           const remoteAudio = document.getElementById("call-remote-audio");
-          if (remoteAudio && event.streams[0]) {
-            remoteAudio.srcObject = event.streams[0];
-            remoteAudio.play().catch(e => console.error("Audio playback error: ", e));
+          if (remoteAudio) {
+            let stream = event.streams[0];
+            if (!stream && event.track) {
+              stream = new MediaStream([event.track]);
+            }
+            if (stream) {
+              remoteAudio.srcObject = stream;
+              remoteAudio.play().catch(e => console.error("Audio playback error: ", e));
+            }
           }
         };
 
@@ -5967,6 +6004,7 @@
               try {
                 const sdp = new RTCSessionDescription(JSON.parse(val));
                 await peerConnection.setRemoteDescription(sdp);
+                await processCandidatesQueue();
               } catch(e) {
                 console.error("Set remote description error on caller: ", e);
               }
@@ -5979,10 +6017,7 @@
           const unsubRc = onChildAdded(rcRef, async (snapshot) => {
             const val = snapshot.val();
             if (val && peerConnection) {
-              try {
-                const cand = new RTCIceCandidate(JSON.parse(val));
-                await peerConnection.addIceCandidate(cand);
-              } catch(e) {}
+              await addOrQueueCandidate(JSON.parse(val));
             }
           });
           iceCandidatesListeners.push(unsubRc);
@@ -6000,6 +6035,7 @@
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
                 await set(ref(db, `calls/${callId}/answer`), JSON.stringify(answer));
+                await processCandidatesQueue();
               } catch(e) {
                 console.error("Set remote offer error on receiver: ", e);
               }
@@ -6012,10 +6048,7 @@
           const unsubCc = onChildAdded(ccRef, async (snapshot) => {
             const val = snapshot.val();
             if (val && peerConnection) {
-              try {
-                const cand = new RTCIceCandidate(JSON.parse(val));
-                await peerConnection.addIceCandidate(cand);
-              } catch(e) {}
+              await addOrQueueCandidate(JSON.parse(val));
             }
           });
           iceCandidatesListeners.push(unsubCc);
