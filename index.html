@@ -3903,7 +3903,7 @@
     window.syncBlockState = syncBlockState;
 
     // ==========================================
-    // Chat Request / Friendship Flow for Private Users
+    // Chat Request / Friendship Flow for All Users
     // ==========================================
     function syncChatRequestState(userId) {
       if (chatRequestValueListener) {
@@ -3917,17 +3917,7 @@
 
       if (!activeChatUserData) return;
 
-      const isTargetPrivate = activeChatUserData.hideSuggestions === true;
-      const isSelfPrivate = currentUserData && currentUserData.hideSuggestions === true;
-
-      // If neither user is private, allow chat and hide request bar immediately
-      if (!isTargetPrivate && !isSelfPrivate) {
-        if (inputBar) inputBar.style.display = "flex";
-        if (requestBar) requestBar.style.display = "none";
-        return;
-      }
-
-      // If at least one of them has suggestions hidden, require an accepted request to chat
+      // Require an accepted request to chat for all users
       const requestRef = ref(db, `chatRequests/${activeChatId}`);
       chatRequestValueListener = onValue(requestRef, (snapshot) => {
         const req = snapshot.val();
@@ -3946,7 +3936,7 @@
           const reqActions = document.getElementById("chat-request-actions");
 
           if (!req) {
-            reqText.textContent = `هذا الحساب خاص. للتحدث مع ${activeChatUserData.username}، يرجى إرسال طلب محادثة أولاً.`;
+            reqText.textContent = `للتحدث مع ${activeChatUserData.username}، يرجى إرسال طلب محادثة أولاً.`;
             reqActions.innerHTML = `
               <button class="btn-primary" onclick="sendChatRequest()" style="width: 100%; padding: 12px 16px; font-size: 13.5px; border-radius: 12px; font-weight: bold; background-color: var(--accent); color: white; border: none; cursor: pointer;">إرسال طلب محادثة</button>
             `;
