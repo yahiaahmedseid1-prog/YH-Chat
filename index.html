@@ -1694,10 +1694,14 @@
           </div>
         </div>
 
-        <!-- Tabs: Chats vs Users -->
+        <!-- Tabs: Chats vs Users vs Requests -->
         <div class="list-tabs">
           <div class="list-tab active" id="tab-chats-list" onclick="switchListTab('chats')">المحادثات</div>
-          <div class="list-tab" id="tab-users-list" onclick="switchListTab('users')">المستكشف (المستخدمين)</div>
+          <div class="list-tab" id="tab-users-list" onclick="switchListTab('users')">المستكشف</div>
+          <div class="list-tab" id="tab-requests-list" onclick="switchListTab('requests')" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <span>الطلبات</span>
+            <span id="requests-badge" style="display: none; background: #ff453a; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; line-height: 1;">0</span>
+          </div>
         </div>
 
         <!-- Lists Container -->
@@ -1706,6 +1710,7 @@
           <div class="empty-state-list" id="list-empty-state">جاري تحميل البيانات...</div>
           <div id="chats-list-items" style="display: block;"></div>
           <div id="users-list-items" style="display: none;"></div>
+          <div id="requests-list-items" style="display: none;"></div>
         </div>
 
         <!-- Floating action pen icon -->
@@ -1802,6 +1807,14 @@
             </div>
           </div>
 
+          <!-- Bottom Chat Blocked Bar -->
+          <div id="chat-blocked-bar" style="display: none; background-color: var(--bg-menu); padding: 18px 24px; border-top: 1px solid var(--divider); text-align: center; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 5;">
+            <p id="chat-blocked-text" style="color: #ff453a; font-size: 14px; margin: 0; line-height: 1.6; direction: rtl; text-align: center; font-family: var(--font-family); font-weight: bold;"></p>
+            <div id="chat-blocked-actions" style="display: flex; gap: 12px; justify-content: center; width: 100%; max-width: 320px; margin-top: 4px;">
+              <!-- buttons dynamically injected, e.g. unblock button -->
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -1848,6 +1861,11 @@
               <span class="info-card-label">إحصائيات الرسائل</span>
               <span class="info-card-value" id="info-card-message-count">0 رسالة متبادلة</span>
             </div>
+          </div>
+
+          <!-- Block Option in Chat Settings -->
+          <div style="margin-top: 24px; padding: 0 4px; display: flex; flex-direction: column; gap: 8px;">
+            <button id="info-block-btn" style="width: 100%; padding: 12px; font-size: 14px; border-radius: 12px; font-weight: bold; background-color: rgba(255, 69, 58, 0.1); color: #ff453a; border: 1px solid rgba(255, 69, 58, 0.2); cursor: pointer; transition: all 0.2s;" onclick="toggleBlockUser()">حظر المستخدم</button>
           </div>
         </div>
       </div>
@@ -2436,6 +2454,10 @@
     let allUsersCache = {};
     let activeChatListener = null;
     let chatRequestValueListener = null;
+    let chatRequestsListListener = null;
+    let chatRequestsCachedData = {};
+    let blockListenerSelf = null;
+    let blockListenerOther = null;
     let chatsListListener = null;
     let typingListener = null;
     let connectedListener = null;
@@ -2521,6 +2543,7 @@
 
           // Start syncing active databases
           startChatsListListener();
+          startChatRequestsListener();
           fetchAllUsers();
           startPresenceSystem();
           
@@ -2937,6 +2960,22 @@
             msgCount = Object.keys(msgSnap.val()).length;
           }
           document.getElementById("info-card-message-count").textContent = `${msgCount} رسالة متبادلة`;
+
+          // Update block button in Right Panel Info screen
+          const blockBtn = document.getElementById("info-block-btn");
+          if (blockBtn) {
+            if (window.isBlockedByMe) {
+              blockBtn.textContent = "إلغاء حظر المستخدم";
+              blockBtn.style.backgroundColor = "rgba(48, 209, 88, 0.1)";
+              blockBtn.style.color = "#30d158";
+              blockBtn.style.borderColor = "rgba(48, 209, 88, 0.2)";
+            } else {
+              blockBtn.textContent = "حظر المستخدم";
+              blockBtn.style.backgroundColor = "rgba(255, 69, 58, 0.1)";
+              blockBtn.style.color = "#ff453a";
+              blockBtn.style.borderColor = "rgba(255, 69, 58, 0.2)";
+            }
+          }
         }
         panel.style.display = "flex";
       } else {
@@ -3045,19 +3084,32 @@
       
       const tabChats = document.getElementById("tab-chats-list");
       const tabUsers = document.getElementById("tab-users-list");
+      const tabRequests = document.getElementById("tab-requests-list");
       const listChats = document.getElementById("chats-list-items");
       const listUsers = document.getElementById("users-list-items");
+      const listRequests = document.getElementById("requests-list-items");
       
       if (tab === "chats") {
         tabChats.classList.add("active");
         tabUsers.classList.remove("active");
+        if (tabRequests) tabRequests.classList.remove("active");
         listChats.style.display = "block";
         listUsers.style.display = "none";
-      } else {
+        if (listRequests) listRequests.style.display = "none";
+      } else if (tab === "users") {
         tabUsers.classList.add("active");
         tabChats.classList.remove("active");
+        if (tabRequests) tabRequests.classList.remove("active");
         listUsers.style.display = "block";
         listChats.style.display = "none";
+        if (listRequests) listRequests.style.display = "none";
+      } else {
+        if (tabRequests) tabRequests.classList.add("active");
+        tabChats.classList.remove("active");
+        tabUsers.classList.remove("active");
+        if (listRequests) listRequests.style.display = "block";
+        listChats.style.display = "none";
+        listUsers.style.display = "none";
       }
       renderListsFiltered();
     }
@@ -3382,16 +3434,314 @@
       }
     }
 
+    // ==========================================
+    // Sync and Render Chat Requests List (Sent and Received)
+    // ==========================================
+    function startChatRequestsListener() {
+      const requestsRef = ref(db, 'chatRequests/');
+      
+      chatRequestsListListener = onValue(requestsRef, (snapshot) => {
+        chatRequestsCachedData = {};
+        let pendingIncomingCount = 0;
+        
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnap) => {
+            const reqId = childSnap.key;
+            const reqVal = childSnap.val();
+            
+            // Filter: only requests involving current user
+            if (reqVal.senderId === currentUserId || reqVal.receiverId === currentUserId) {
+              chatRequestsCachedData[reqId] = reqVal;
+              
+              if (reqVal.receiverId === currentUserId && reqVal.status === "pending") {
+                pendingIncomingCount++;
+              }
+            }
+          });
+        }
+        
+        // Update requests badge
+        const badge = document.getElementById("requests-badge");
+        if (badge) {
+          if (pendingIncomingCount > 0) {
+            badge.textContent = pendingIncomingCount;
+            badge.style.display = "inline-block";
+          } else {
+            badge.style.display = "none";
+          }
+        }
+        
+        if (currentListTab === "requests") {
+          renderRequestsList();
+        }
+      });
+    }
+
+    function renderRequestsList() {
+      const requestsListDiv = document.getElementById("requests-list-items");
+      if (!requestsListDiv) return;
+      requestsListDiv.innerHTML = "";
+      
+      const emptyState = document.getElementById("list-empty-state");
+      
+      const receivedPending = [];
+      const sentPending = [];
+      const acceptedRequests = [];
+      
+      Object.values(chatRequestsCachedData).forEach(req => {
+        if (req.status === "pending") {
+          if (req.receiverId === currentUserId) {
+            receivedPending.push(req);
+          } else if (req.senderId === currentUserId) {
+            sentPending.push(req);
+          }
+        } else if (req.status === "accepted") {
+          acceptedRequests.push(req);
+        }
+      });
+      
+      // Sort each by timestamp descending
+      receivedPending.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      sentPending.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      acceptedRequests.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      
+      const totalCount = receivedPending.length + sentPending.length + acceptedRequests.length;
+      if (totalCount === 0) {
+        if (currentListTab === "requests") {
+          emptyState.style.display = "block";
+          emptyState.textContent = "لا توجد طلبات مراسلة حالية.";
+        }
+        return;
+      } else {
+        emptyState.style.display = "none";
+      }
+      
+      // Helper function to render a request item
+      function createRequestElement(req, type) {
+        const otherUserId = (type === "received") ? req.senderId : req.receiverId;
+        const otherUser = allUsersCache[otherUserId];
+        if (!otherUser) return null;
+        
+        const item = document.createElement("div");
+        item.className = "chat-item";
+        item.style.cursor = "default";
+        item.style.padding = "14px 16px";
+        item.style.display = "flex";
+        item.style.flexDirection = "column";
+        item.style.gap = "10px";
+        item.style.borderBottom = "1px solid var(--divider)";
+        
+        // Header info (avatar + name + time/status)
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.alignItems = "center";
+        header.style.justifyContent = "space-between";
+        header.style.width = "100%";
+        
+        const userInfo = document.createElement("div");
+        userInfo.style.display = "flex";
+        userInfo.style.alignItems = "center";
+        userInfo.style.gap = "12px";
+        
+        // Avatar
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        setAvatar(avatar, otherUser);
+        
+        // Details
+        const details = document.createElement("div");
+        details.style.display = "flex";
+        details.style.flexDirection = "column";
+        
+        const nameSpan = document.createElement("span");
+        nameSpan.style.color = "var(--text-primary)";
+        nameSpan.style.fontWeight = "bold";
+        nameSpan.style.fontSize = "14px";
+        nameSpan.textContent = otherUser.username;
+        
+        const statusSpan = document.createElement("span");
+        statusSpan.style.color = "var(--text-secondary)";
+        statusSpan.style.fontSize = "11px";
+        statusSpan.style.marginTop = "2px";
+        if (type === "received") {
+          statusSpan.textContent = "يريد مراسلتك";
+        } else if (type === "sent") {
+          statusSpan.textContent = "في انتظار موافقته";
+        } else {
+          statusSpan.textContent = "مقبول - جاهز للمراسلة";
+        }
+        
+        details.appendChild(nameSpan);
+        details.appendChild(statusSpan);
+        userInfo.appendChild(avatar);
+        userInfo.appendChild(details);
+        
+        header.appendChild(userInfo);
+        item.appendChild(header);
+        
+        // Action buttons
+        const actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.gap = "8px";
+        actions.style.width = "100%";
+        actions.style.justifyContent = "flex-end";
+        
+        if (type === "received") {
+          const acceptBtn = document.createElement("button");
+          acceptBtn.textContent = "موافقة";
+          acceptBtn.style.padding = "6px 14px";
+          acceptBtn.style.fontSize = "12px";
+          acceptBtn.style.fontWeight = "bold";
+          acceptBtn.style.borderRadius = "8px";
+          acceptBtn.style.border = "none";
+          acceptBtn.style.backgroundColor = "var(--accent)";
+          acceptBtn.style.color = "white";
+          acceptBtn.style.cursor = "pointer";
+          acceptBtn.onclick = async () => {
+            try {
+              const requestRef = ref(db, `chatRequests/${req.id}`);
+              await update(requestRef, { status: "accepted" });
+            } catch (err) {
+              console.error("Accept request err: ", err);
+            }
+          };
+          
+          const declineBtn = document.createElement("button");
+          declineBtn.textContent = "رفض";
+          declineBtn.style.padding = "6px 14px";
+          declineBtn.style.fontSize = "12px";
+          declineBtn.style.fontWeight = "bold";
+          declineBtn.style.borderRadius = "8px";
+          declineBtn.style.border = "1px solid rgba(255, 69, 58, 0.3)";
+          declineBtn.style.backgroundColor = "transparent";
+          declineBtn.style.color = "#ff453a";
+          declineBtn.style.cursor = "pointer";
+          declineBtn.onclick = async () => {
+            try {
+              const requestRef = ref(db, `chatRequests/${req.id}`);
+              await set(requestRef, null);
+            } catch (err) {
+              console.error("Decline request err: ", err);
+            }
+          };
+          
+          actions.appendChild(acceptBtn);
+          actions.appendChild(declineBtn);
+        } else if (type === "sent") {
+          const cancelBtn = document.createElement("button");
+          cancelBtn.textContent = "إلغاء الطلب";
+          cancelBtn.style.padding = "6px 14px";
+          cancelBtn.style.fontSize = "12px";
+          cancelBtn.style.fontWeight = "bold";
+          cancelBtn.style.borderRadius = "8px";
+          cancelBtn.style.border = "1px solid var(--divider)";
+          cancelBtn.style.backgroundColor = "transparent";
+          cancelBtn.style.color = "var(--text-secondary)";
+          cancelBtn.style.cursor = "pointer";
+          cancelBtn.onclick = async () => {
+            try {
+              const requestRef = ref(db, `chatRequests/${req.id}`);
+              await set(requestRef, null);
+            } catch (err) {
+              console.error("Cancel request err: ", err);
+            }
+          };
+          actions.appendChild(cancelBtn);
+        } else {
+          // Accepted request
+          const chatBtn = document.createElement("button");
+          chatBtn.textContent = "فتح المحادثة";
+          chatBtn.style.padding = "6px 14px";
+          chatBtn.style.fontSize = "12px";
+          chatBtn.style.fontWeight = "bold";
+          chatBtn.style.borderRadius = "8px";
+          chatBtn.style.border = "none";
+          chatBtn.style.backgroundColor = "rgba(48, 209, 88, 0.15)";
+          chatBtn.style.color = "#30d158";
+          chatBtn.style.cursor = "pointer";
+          chatBtn.onclick = () => {
+            selectUserToChat(otherUserId);
+          };
+          actions.appendChild(chatBtn);
+        }
+        
+        item.appendChild(actions);
+        return item;
+      }
+      
+      // Render Received section
+      if (receivedPending.length > 0) {
+        const sectionTitle = document.createElement("div");
+        sectionTitle.style.padding = "10px 16px 6px 16px";
+        sectionTitle.style.fontSize = "12px";
+        sectionTitle.style.fontWeight = "bold";
+        sectionTitle.style.color = "var(--accent)";
+        sectionTitle.style.backgroundColor = "rgba(0, 122, 255, 0.05)";
+        sectionTitle.textContent = "طلبات مستلمة قيد الانتظار";
+        requestsListDiv.appendChild(sectionTitle);
+        
+        receivedPending.forEach(req => {
+          const el = createRequestElement(req, "received");
+          if (el) requestsListDiv.appendChild(el);
+        });
+      }
+      
+      // Render Sent section
+      if (sentPending.length > 0) {
+        const sectionTitle = document.createElement("div");
+        sectionTitle.style.padding = "14px 16px 6px 16px";
+        sectionTitle.style.fontSize = "12px";
+        sectionTitle.style.fontWeight = "bold";
+        sectionTitle.style.color = "var(--text-secondary)";
+        sectionTitle.style.backgroundColor = "rgba(255, 255, 255, 0.02)";
+        sectionTitle.textContent = "طلبات مرسلة قيد الانتظار";
+        requestsListDiv.appendChild(sectionTitle);
+        
+        sentPending.forEach(req => {
+          const el = createRequestElement(req, "sent");
+          if (el) requestsListDiv.appendChild(el);
+        });
+      }
+      
+      // Render Accepted section
+      if (acceptedRequests.length > 0) {
+        const sectionTitle = document.createElement("div");
+        sectionTitle.style.padding = "14px 16px 6px 16px";
+        sectionTitle.style.fontSize = "12px";
+        sectionTitle.style.fontWeight = "bold";
+        sectionTitle.style.color = "#30d158";
+        sectionTitle.style.backgroundColor = "rgba(48, 209, 88, 0.03)";
+        sectionTitle.textContent = "طلبات تم قبولها";
+        requestsListDiv.appendChild(sectionTitle);
+        
+        acceptedRequests.forEach(req => {
+          const el = createRequestElement(req, "accepted");
+          if (el) requestsListDiv.appendChild(el);
+        });
+      }
+    }
+
     // Filter wrapper for search query inputs
     function renderListsFiltered() {
+      const listChats = document.getElementById("chats-list-items");
+      const listUsers = document.getElementById("users-list-items");
+      const listRequests = document.getElementById("requests-list-items");
+      
       if (currentListTab === "chats") {
         renderChatsListHTML();
-        document.getElementById("users-list-items").style.display = "none";
-        document.getElementById("chats-list-items").style.display = "block";
-      } else {
+        if (listUsers) listUsers.style.display = "none";
+        if (listRequests) listRequests.style.display = "none";
+        if (listChats) listChats.style.display = "block";
+      } else if (currentListTab === "users") {
         renderUsersList();
-        document.getElementById("chats-list-items").style.display = "none";
-        document.getElementById("users-list-items").style.display = "block";
+        if (listChats) listChats.style.display = "none";
+        if (listRequests) listRequests.style.display = "none";
+        if (listUsers) listUsers.style.display = "block";
+      } else {
+        renderRequestsList();
+        if (listChats) listChats.style.display = "none";
+        if (listUsers) listUsers.style.display = "none";
+        if (listRequests) listRequests.style.display = "block";
       }
     }
 
@@ -3399,6 +3749,134 @@
       searchQuery = val.trim();
       renderListsFiltered();
     }
+
+    // ==========================================
+    // Chat Block System
+    // ==========================================
+    function syncBlockState(userId) {
+      if (blockListenerSelf) {
+        blockListenerSelf();
+        blockListenerSelf = null;
+      }
+      if (blockListenerOther) {
+        blockListenerOther();
+        blockListenerOther = null;
+      }
+
+      window.isBlockedByMe = false;
+      window.isBlockedByThem = false;
+
+      const selfBlockRef = ref(db, `blocks/${currentUserId}/${userId}`);
+      const otherBlockRef = ref(db, `blocks/${userId}/${currentUserId}`);
+
+      function onBlockStateChanged() {
+        // Update the block button in the right panel/sidebar
+        const blockBtn = document.getElementById("info-block-btn");
+        if (blockBtn) {
+          if (window.isBlockedByMe) {
+            blockBtn.textContent = "إلغاء حظر المستخدم";
+            blockBtn.style.backgroundColor = "rgba(48, 209, 88, 0.1)";
+            blockBtn.style.color = "#30d158";
+            blockBtn.style.borderColor = "rgba(48, 209, 88, 0.2)";
+          } else {
+            blockBtn.textContent = "حظر المستخدم";
+            blockBtn.style.backgroundColor = "rgba(255, 69, 58, 0.1)";
+            blockBtn.style.color = "#ff453a";
+            blockBtn.style.borderColor = "rgba(255, 69, 58, 0.2)";
+          }
+        }
+
+        // Update UI bars
+        const inputBar = document.querySelector(".chat-input-bar");
+        const requestBar = document.getElementById("chat-request-bar");
+        const blockedBar = document.getElementById("chat-blocked-bar");
+        const replyEditBar = document.getElementById("reply-edit-preview-bar");
+        const blockedText = document.getElementById("chat-blocked-text");
+        const blockedActions = document.getElementById("chat-blocked-actions");
+
+        if (window.isBlockedByMe) {
+          if (inputBar) inputBar.style.display = "none";
+          if (replyEditBar) replyEditBar.style.display = "none";
+          if (requestBar) requestBar.style.display = "none";
+          if (blockedBar) blockedBar.style.display = "flex";
+
+          blockedText.textContent = "لقد قمت بحظر هذا المستخدم. لا يمكنك إرسال أو استقبال الرسائل منه.";
+          blockedActions.innerHTML = `
+            <button class="btn-primary" onclick="toggleBlockUser()" style="width: 100%; padding: 12px 16px; font-size: 13.5px; border-radius: 12px; font-weight: bold; background-color: var(--accent); color: white; border: none; cursor: pointer;">إلغاء الحظر</button>
+          `;
+          
+          // Stop message synchronization and clear messages box
+          if (activeChatListener) {
+            activeChatListener();
+            activeChatListener = null;
+          }
+          const msgBox = document.getElementById("chat-messages-box");
+          if (msgBox) {
+            msgBox.innerHTML = '<div style="text-align:center; padding: 20px; color:#ff453a; font-weight: bold;">لقد قمت بحظر هذا المستخدم. تم إيقاف مزامنة الرسائل.</div>';
+          }
+        } else if (window.isBlockedByThem) {
+          if (inputBar) inputBar.style.display = "none";
+          if (replyEditBar) replyEditBar.style.display = "none";
+          if (requestBar) requestBar.style.display = "none";
+          if (blockedBar) blockedBar.style.display = "flex";
+
+          blockedText.textContent = "لقد قام هذا المستخدم بحظرك. لا يمكنك إرسال أو استقبال الرسائل معه.";
+          blockedActions.innerHTML = "";
+          
+          // Stop message synchronization and clear messages box
+          if (activeChatListener) {
+            activeChatListener();
+            activeChatListener = null;
+          }
+          const msgBox = document.getElementById("chat-messages-box");
+          if (msgBox) {
+            msgBox.innerHTML = '<div style="text-align:center; padding: 20px; color:#ff453a; font-weight: bold;">لا يمكنك رؤية الرسائل لأن هذا المستخدم قام بحظرك.</div>';
+          }
+        } else {
+          // No blocks exist, hide blocked bar and resume normal flow (which might show request bar or input bar)
+          if (blockedBar) blockedBar.style.display = "none";
+          
+          // Resume normal chat requests sync and start message sync
+          syncChatRequestState(userId);
+          startMessagesSync();
+        }
+      }
+
+      blockListenerSelf = onValue(selfBlockRef, (snapshot) => {
+        window.isBlockedByMe = snapshot.exists() && snapshot.val() === true;
+        onBlockStateChanged();
+      });
+
+      blockListenerOther = onValue(otherBlockRef, (snapshot) => {
+        window.isBlockedByThem = snapshot.exists() && snapshot.val() === true;
+        onBlockStateChanged();
+      });
+    }
+
+    async function toggleBlockUser() {
+      if (!currentUserId || !activeChatUserId) return;
+      try {
+        const blockRef = ref(db, `blocks/${currentUserId}/${activeChatUserId}`);
+        const newBlockState = !window.isBlockedByMe;
+        
+        if (newBlockState) {
+          const confirmBlock = confirm("هل أنت متأكد من رغبتك في حظر هذا المستخدم؟ لن تتمكن من رؤية رسائله أو التحدث معه.");
+          if (!confirmBlock) return;
+          await set(blockRef, true);
+          alert("تم حظر المستخدم بنجاح.");
+        } else {
+          await set(blockRef, null);
+          alert("تم إلغاء حظر المستخدم بنجاح.");
+        }
+      } catch (err) {
+        console.error("Error toggling block state: ", err);
+        alert("فشل تغيير حالة الحظر.");
+      }
+    }
+
+    // Export to window
+    window.toggleBlockUser = toggleBlockUser;
+    window.syncBlockState = syncBlockState;
 
     // ==========================================
     // Chat Request / Friendship Flow for Private Users
@@ -3561,14 +4039,11 @@
       // Hide right info drawer if opened
       toggleRightPanel(false);
       
-      // Load Messages listener
-      startMessagesSync();
-
       // Start real-time typing indicators
       startTypingListener();
 
-      // Check chat requests and privacy permissions
-      syncChatRequestState(userId);
+      // Check blocks and privacy permissions (this coordinates startMessagesSync and syncChatRequestState internally)
+      syncBlockState(userId);
     }
 
     // ==========================================
@@ -4108,6 +4583,10 @@
       if (chatsListListener) {
         chatsListListener();
         chatsListListener = null;
+      }
+      if (chatRequestsListListener) {
+        chatRequestsListListener();
+        chatRequestsListListener = null;
       }
       if (connectedListener) {
         connectedListener();
