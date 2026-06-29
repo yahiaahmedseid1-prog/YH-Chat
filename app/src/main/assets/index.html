@@ -3503,8 +3503,10 @@
             let checkmarks = "";
             if (isSelf) {
               if (isPending) {
-                // Spinning clock icon
-                checkmarks = `<span class="read-status pending" style="font-size: 11px; margin-right: 4px; color: rgba(255, 255, 255, 0.5); vertical-align: middle; animation: spin 1.5s linear infinite; display: inline-block;">🕒</span>`;
+                // Show clock icon (static if offline, spinning if sending/uploading)
+                const isOffline = (window.localPendingMessages && window.localPendingMessages[msgKey] && window.localPendingMessages[msgKey].failedOffline) || !navigator.onLine;
+                const animStyle = isOffline ? "" : "animation: spin 1.5s linear infinite;";
+                checkmarks = `<span class="read-status pending" style="font-size: 11.5px; margin-right: 4px; color: rgba(255, 255, 255, 0.65); vertical-align: middle; ${animStyle} display: inline-block;" title="في انتظار الاتصال بالشبكة">🕒</span>`;
               } else {
                 const isRead = msg.read === true;
                 if (isRead) {
@@ -3640,6 +3642,54 @@
       });
     }
 
+    // Retry sending offline pending messages automatically when internet connection is restored
+    async function retryOfflinePendingMessages() {
+      if (!window.localPendingMessages || !navigator.onLine) return;
+      
+      const pendingEntries = Object.entries(window.localPendingMessages);
+      for (const [key, msgPayload] of pendingEntries) {
+        if (msgPayload.failedOffline && msgPayload.chatId) {
+          try {
+            const cleanPayload = {
+              senderId: msgPayload.senderId,
+              text: msgPayload.text || "",
+              timestamp: msgPayload.timestamp || Date.now(),
+              read: false
+            };
+            if (msgPayload.replyTo) cleanPayload.replyTo = msgPayload.replyTo;
+            if (msgPayload.voice) cleanPayload.voice = msgPayload.voice;
+            if (msgPayload.image) cleanPayload.image = msgPayload.image;
+
+            // Send to database
+            await set(ref(db, `messages/${msgPayload.chatId}/${key}`), cleanPayload);
+
+            // Update parent chat room
+            let lastText = msgPayload.text;
+            if (msgPayload.voice) lastText = "🎙️ رسالة صوتية";
+            else if (msgPayload.image) lastText = msgPayload.text ? `📷 ${msgPayload.text}` : "📷 صورة";
+
+            const chatRef = ref(db, `chats/${msgPayload.chatId}`);
+            await update(chatRef, {
+              participants: [msgPayload.senderId, activeChatUserId || ""],
+              lastMessage: lastText,
+              lastMessageTime: cleanPayload.timestamp,
+              lastSenderId: msgPayload.senderId,
+              lastMessageRead: false
+            });
+
+            // Remove from pending
+            removePendingMessage(key);
+          } catch (err) {
+            console.error("Failed to resend pending message: ", err);
+          }
+        }
+      }
+    }
+
+    window.addEventListener("online", () => {
+      retryOfflinePendingMessages();
+    });
+
     // ==========================================
     // Send Message Workflow
     // ==========================================
@@ -3716,6 +3766,15 @@
 
         addPendingMessage(newMsgKey, msgPayload);
 
+        if (!navigator.onLine) {
+          if (window.localPendingMessages && window.localPendingMessages[newMsgKey]) {
+            window.localPendingMessages[newMsgKey].failedOffline = true;
+          }
+          window.renderMessagesWithPending();
+          newMsgKey = null; // Prevent deletion in finally
+          return;
+        }
+
         // Write message packet
         await set(ref(db, `messages/${activeChatId}/${newMsgKey}`), msgPayload);
 
@@ -3731,7 +3790,15 @@
 
       } catch (err) {
         console.error("Error sending message: ", err);
-        alert("فشل إرسال الرسالة. يرجى التحقق من الاتصال بالإنترنت.");
+        if (!navigator.onLine) {
+          if (newMsgKey && window.localPendingMessages && window.localPendingMessages[newMsgKey]) {
+            window.localPendingMessages[newMsgKey].failedOffline = true;
+            window.renderMessagesWithPending();
+            newMsgKey = null; // Prevent deletion
+          }
+        } else {
+          alert("فشل إرسال الرسالة. يرجى التحقق من الاتصال بالإنترنت.");
+        }
       } finally {
         if (newMsgKey) {
           removePendingMessage(newMsgKey);
@@ -4521,6 +4588,15 @@
 
         addPendingMessage(newMsgKey, msgPayload);
 
+        if (!navigator.onLine) {
+          if (window.localPendingMessages && window.localPendingMessages[newMsgKey]) {
+            window.localPendingMessages[newMsgKey].failedOffline = true;
+          }
+          window.renderMessagesWithPending();
+          newMsgKey = null; // Prevent deletion in finally
+          return;
+        }
+
         await set(ref(db, `messages/${activeChatId}/${newMsgKey}`), msgPayload);
 
         const chatRef = ref(db, `chats/${activeChatId}`);
@@ -4534,7 +4610,15 @@
 
       } catch (err) {
         console.error("Error sending voice: ", err);
-        alert("فشل إرسال الرسالة الصوتية.");
+        if (!navigator.onLine) {
+          if (newMsgKey && window.localPendingMessages && window.localPendingMessages[newMsgKey]) {
+            window.localPendingMessages[newMsgKey].failedOffline = true;
+            window.renderMessagesWithPending();
+            newMsgKey = null; // Prevent deletion
+          }
+        } else {
+          alert("فشل إرسال الرسالة الصوتية.");
+        }
       } finally {
         if (newMsgKey) {
           removePendingMessage(newMsgKey);
@@ -4701,6 +4785,15 @@
 
         addPendingMessage(newMsgKey, msgPayload);
 
+        if (!navigator.onLine) {
+          if (window.localPendingMessages && window.localPendingMessages[newMsgKey]) {
+            window.localPendingMessages[newMsgKey].failedOffline = true;
+          }
+          window.renderMessagesWithPending();
+          newMsgKey = null; // Prevent deletion in finally
+          return;
+        }
+
         await set(ref(db, `messages/${activeChatId}/${newMsgKey}`), msgPayload);
 
         const chatRef = ref(db, `chats/${activeChatId}`);
@@ -4714,7 +4807,15 @@
 
       } catch (err) {
         console.error("Error sending image: ", err);
-        alert("فشل إرسال الصورة.");
+        if (!navigator.onLine) {
+          if (newMsgKey && window.localPendingMessages && window.localPendingMessages[newMsgKey]) {
+            window.localPendingMessages[newMsgKey].failedOffline = true;
+            window.renderMessagesWithPending();
+            newMsgKey = null; // Prevent deletion
+          }
+        } else {
+          alert("فشل إرسال الصورة.");
+        }
       } finally {
         if (newMsgKey) {
           removePendingMessage(newMsgKey);
