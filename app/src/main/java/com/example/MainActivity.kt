@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -66,7 +68,34 @@ fun TelegramWebView(modifier: Modifier = Modifier) {
           allowFileAccess = true
           mediaPlaybackRequiresUserGesture = false
         }
-        webViewClient = WebViewClient()
+        webViewClient = object : WebViewClient() {
+          override fun shouldInterceptRequest(
+            view: WebView?,
+            request: WebResourceRequest?
+          ): WebResourceResponse? {
+            val url = request?.url ?: return null
+            if (url.host == "appassets.androidplatform.net" && url.path?.startsWith("/assets/") == true) {
+              val assetPath = url.path?.substringAfter("/assets/") ?: return null
+              try {
+                val inputStream = context.assets.open(assetPath)
+                val mimeType = when {
+                  assetPath.endsWith(".html") -> "text/html"
+                  assetPath.endsWith(".css") -> "text/css"
+                  assetPath.endsWith(".js") -> "application/javascript"
+                  assetPath.endsWith(".png") -> "image/png"
+                  assetPath.endsWith(".jpg") || assetPath.endsWith(".jpeg") -> "image/jpeg"
+                  assetPath.endsWith(".svg") -> "image/svg+xml"
+                  assetPath.endsWith(".json") -> "application/json"
+                  else -> "application/octet-stream"
+                }
+                return WebResourceResponse(mimeType, "UTF-8", inputStream)
+              } catch (e: Exception) {
+                e.printStackTrace()
+              }
+            }
+            return super.shouldInterceptRequest(view, request)
+          }
+        }
         webChromeClient = object : WebChromeClient() {
           override fun onPermissionRequest(request: PermissionRequest?) {
             try {
@@ -76,7 +105,7 @@ fun TelegramWebView(modifier: Modifier = Modifier) {
             }
           }
         }
-        loadUrl("file:///android_asset/index.html")
+        loadUrl("https://appassets.androidplatform.net/assets/index.html")
       }
     }
   )
