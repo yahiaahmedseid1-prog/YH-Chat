@@ -255,9 +255,46 @@ class MainActivity : ComponentActivity() {
         
     notificationManager.notify(chatId.hashCode(), builder.build())
   }
+
+  fun shareApk() {
+    try {
+      val context = this
+      val appInfo = context.applicationInfo
+      val originalApkFile = java.io.File(appInfo.sourceDir)
+      val sharedApkFile = java.io.File(context.cacheDir, "YH_Chat.apk")
+      
+      // Copy APK to cache so FileProvider can read it securely
+      originalApkFile.inputStream().use { input ->
+        sharedApkFile.outputStream().use { output ->
+          input.copyTo(output)
+        }
+      }
+      
+      val authority = "${context.packageName}.fileprovider"
+      val apkUri = androidx.core.content.FileProvider.getUriForFile(context, authority, sharedApkFile)
+      
+      val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "application/vnd.android.package-archive"
+        putExtra(Intent.EXTRA_STREAM, apkUri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+      }
+      
+      val chooserIntent = Intent.createChooser(shareIntent, "مشاركة التطبيق (APK)")
+      context.startActivity(chooserIntent)
+    } catch (e: Exception) {
+      e.printStackTrace()
+    }
+  }
 }
 
 class WebAppInterface(private val activity: MainActivity) {
+  @JavascriptInterface
+  fun shareApk() {
+    activity.runOnUiThread {
+      activity.shareApk()
+    }
+  }
+
   @JavascriptInterface
   fun showCallNotification(callerName: String, callId: String) {
     activity.showCallNotification(callerName, callId)

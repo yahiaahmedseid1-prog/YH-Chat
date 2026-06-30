@@ -2125,6 +2125,10 @@
               <span class="icon">⚙️</span>
               <span>الإعدادات</span>
             </div>
+            <div class="drawer-menu-item" onclick="shareApkPackage()">
+              <span class="icon">📥</span>
+              <span>مشاركة التطبيق (APK)</span>
+            </div>
             <div class="drawer-menu-item" onclick="switchListTab('chats'); toggleLeftDrawer(false)">
               <span class="icon">💬</span>
               <span>المحادثات الخاصة</span>
@@ -2296,6 +2300,14 @@
                 <span>إخفاء الحساب من الاقتراحات (البحث المباشر وطلب محادثة فقط)</span>
               </label>
               <span style="font-size: 11px; color: var(--text-secondary); display: block; margin-top: 5px; margin-right: 28px; direction: rtl; text-align: right;">عند تفعيل هذا الخيار، لن يظهر حسابك في قائمة الاقتراحات للآخرين تلقائياً. سيتوجب عليهم البحث عنك وإرسال طلب محادثة وموافقتك عليها للبدء بالتحدث.</span>
+            </div>
+
+            <!-- Share APK Section -->
+            <hr style="border: none; border-top: 1px solid var(--divider); margin: 24px 0 16px 0;">
+            <div style="background-color: rgba(82, 136, 193, 0.08); border: 1px solid rgba(82, 136, 193, 0.2); padding: 18px; border-radius: 16px; text-align: center;">
+              <h4 style="color: var(--accent); font-size: 15px; margin-bottom: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">📥 مشاركة التطبيق</h4>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.5; text-align: right; direction: rtl;">هل ترغب في مشاركة تطبيق YH Chat مع أصدقائك؟ يمكنك مشاركة ملف التثبيت (APK) الخاص بالتطبيق مباشرةً دون الحاجة لإنترنت.</p>
+              <button type="button" style="background-color: var(--accent); color: white; border: none; font-size: 13.5px; font-weight: bold; padding: 12px 16px; border-radius: 11px; width: 100%; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--accent-hover)'" onmouseout="this.style.backgroundColor='var(--accent)'" onclick="shareApkPackage()">مشاركة حزمة التثبيت (APK)</button>
             </div>
 
             <!-- Danger Zone: Delete Account -->
@@ -3316,6 +3328,14 @@
         hideSuggestionsToggle.checked = currentUserData.hideSuggestions === true;
       }
       document.getElementById("settings-modal").style.display = "flex";
+    }
+
+    function shareApkPackage() {
+      if (window.AndroidBridge && window.AndroidBridge.shareApk) {
+        window.AndroidBridge.shareApk();
+      } else {
+        alert("خاصية المشاركة متاحة فقط عند تشغيل التطبيق على الهاتف!");
+      }
     }
 
     function closeSettingsModal() {
