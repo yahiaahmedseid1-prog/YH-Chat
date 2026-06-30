@@ -371,7 +371,8 @@ fun TelegramWebView(modifier: Modifier = Modifier) {
             request: WebResourceRequest?
           ): WebResourceResponse? {
             val url = request?.url ?: return null
-            if (url.host == "appassets.androidplatform.net" && url.path?.startsWith("/assets/") == true) {
+            val host = url.host
+            if ((host == "localhost" || host == "appassets.androidplatform.net") && url.path?.startsWith("/assets/") == true) {
               val assetPath = url.path?.substringAfter("/assets/") ?: return null
               try {
                 val inputStream = context.assets.open(assetPath)
@@ -410,7 +411,7 @@ fun TelegramWebView(modifier: Modifier = Modifier) {
             return true
           }
         }
-        loadUrl("https://appassets.androidplatform.net/assets/index.html")
+        loadUrl("https://localhost/assets/index.html")
       }
     }
   )

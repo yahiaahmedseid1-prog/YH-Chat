@@ -2479,6 +2479,9 @@
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
     import { 
       getAuth, 
+      initializeAuth,
+      indexedDBLocalPersistence,
+      browserLocalPersistence,
       signInWithEmailAndPassword, 
       createUserWithEmailAndPassword, 
       signOut, 
@@ -2524,7 +2527,15 @@
       console.warn("Analytics could not be initialized: ", e);
     }
 
-    const auth = getAuth(app);
+    let auth;
+    try {
+      auth = initializeAuth(app, {
+        persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+      });
+    } catch (e) {
+      console.warn("initializeAuth failed, falling back to getAuth:", e);
+      auth = getAuth(app);
+    }
     const db = getDatabase(app);
 
     // Global application state variables
