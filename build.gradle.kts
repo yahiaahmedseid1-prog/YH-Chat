@@ -12,3 +12,15 @@ tasks.register<Copy>("copyIndexHtml") {
   from("app/src/main/assets/index.html")
   into(".")
 }
+
+tasks.register<Copy>("copyApk") {
+  from("app/build/outputs/apk/debug")
+  include("app-debug.apk")
+  into(".")
+}
+
+tasks.register<Copy>("copyApkFromBuildOutputs") {
+  from(".build-outputs")
+  include("app-debug.apk")
+  into(".")
+}
